@@ -28,11 +28,4 @@ curl -L https://github.com/robbyrussell/oh-my-zsh/raw/master/tools/install.sh | 
 brew tap mas-cli/tap
 brew tap-pin mas-cli/tap
 
-# Install more recent versions of some OS X tools
-brew tap homebrew/dupes
-brew install homebrew/dupes/grep
-
 chsh -s /usr/local/bin/zsh
-
-# Install brew services
-brew tap homebrew/boneyard
