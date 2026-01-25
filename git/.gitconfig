@@ -1,0 +1,19 @@
+[user]
+	name = Drew Butler
+	email = hi@dbtlr.com
+
+[init]
+	defaultBranch = main
+
+[core]
+	editor = nvim
+
+[pull]
+	rebase = false
+
+[alias]
+	st = status
+	co = checkout
+	br = branch
+	ci = commit
+	lg = log --oneline --graph --decorate
