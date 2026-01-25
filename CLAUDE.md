@@ -43,3 +43,33 @@ zsh/.config/zsh/
 - `$TERMINUS_SUBLIME` - Terminus sets this variable
 
 After creating new files, run `stow -R zsh` from dotfiles root (or manually symlink).
+
+## Claude Code Configuration
+
+User-level Claude Code context in `claude/.claude/`:
+
+```
+claude/.claude/
+├── CLAUDE.md           # Universal personal context (synced)
+└── rules/
+    ├── coding-style.md # Code style preferences
+    └── workflows.md    # Preferred workflows
+```
+
+After `stow claude`:
+- `~/.claude/CLAUDE.md` symlinks to dotfiles (synced across machines)
+- `~/.claude/rules/*.md` symlinks to dotfiles (synced)
+- `~/.claude/CLAUDE.local.md` is machine-specific (create manually, not tracked)
+
+**New machine setup:**
+1. Run `stow claude` from dotfiles root
+2. Create `~/.claude/CLAUDE.local.md` with machine-specific info
+
+**Example CLAUDE.local.md:**
+```markdown
+# Local: hostname
+
+## This Machine
+- OS: Ubuntu server, headless
+- Notable tools: Docker, Postgres on localhost:5432
+```
