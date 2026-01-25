@@ -23,8 +23,23 @@ esac
 [[ "$LC_TERMINAL" == "Blink" ]] && DOTFILES_TERMINAL="blink"
 [[ -n "${TERMINUS_SUBLIME:-}" ]] && DOTFILES_TERMINAL="terminus"
 
+# --- SSH/Remote Detection ---
+export DOTFILES_REMOTE=""
+[[ -n "$SSH_CONNECTION" ]] && DOTFILES_REMOTE="ssh"
+
+# --- Multiplexer Detection ---
+export DOTFILES_MULTIPLEXER=""
+[[ -n "$TMUX" ]] && DOTFILES_MULTIPLEXER="tmux"
+[[ -n "$STY" ]] && DOTFILES_MULTIPLEXER="screen"
+
 # --- Context Loader ---
-_load_if_exists() { [[ -f "$1" ]] && source "$1"; }
+# Set DOTFILES_DEBUG=1 before sourcing to trace loaded configs
+_load_if_exists() {
+  if [[ -f "$1" ]]; then
+    [[ -n "${DOTFILES_DEBUG:-}" ]] && echo "Loading: $1"
+    source "$1"
+  fi
+}
 
 _load_if_exists "$HOME/.config/zsh/os/${DOTFILES_OS}.zsh"
 _load_if_exists "$HOME/.config/zsh/hosts/${DOTFILES_HOST}.zsh"

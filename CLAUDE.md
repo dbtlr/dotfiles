@@ -28,6 +28,9 @@ zsh/.config/zsh/
 - `$DOTFILES_OS` - "macos", "linux", or "unknown"
 - `$DOTFILES_HOST` - Hostname without domain (e.g., "asgard")
 - `$DOTFILES_TERMINAL` - "vscode", "blink", "ghostty", "iterm", "terminus", "apple", or "unknown"
+- `$DOTFILES_REMOTE` - "ssh" if connected via SSH, empty otherwise
+- `$DOTFILES_MULTIPLEXER` - "tmux" or "screen" if inside one, empty otherwise
+- `$DOTFILES_DEBUG` - Set to 1 before sourcing to trace which configs are loaded
 
 **Adding new configs:**
 - New host: Create `zsh/.config/zsh/hosts/<hostname>.zsh`
