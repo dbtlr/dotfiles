@@ -1,0 +1,10 @@
+# Git files
+\.git
+\.gitignore
+
+# Docs
+README\.md
+LICENSE
+
+# Scripts
+install\.sh
