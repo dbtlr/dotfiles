@@ -26,6 +26,7 @@ source ~/.config/zsh/aliases.zsh
 source ~/.config/zsh/functions.zsh
 source ~/.config/zsh/plugins.zsh
 source ~/.config/zsh/node.zsh
+source ~/.config/zsh/context.zsh
 
 
 # pnpm
