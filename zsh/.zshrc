@@ -16,8 +16,6 @@ plugins=(
   tmux
 )
 
-stty erase '^?'
-
 source $ZSH/oh-my-zsh.sh
 
 # Modular config
