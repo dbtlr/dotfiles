@@ -2,8 +2,6 @@
 set -e
 
 DOTFILES="$HOME/dotfiles"
-PACKAGES=(zsh bash nvim tmux git)
-
 echo "==> Installing dotfiles"
 
 # Install stow if missing
@@ -40,14 +38,13 @@ backup_if_exists "$HOME/.config/nvim"
 backup_if_exists "$HOME/.config/tmux/tmux.conf"
 backup_if_exists "$HOME/.config/zsh"
 backup_if_exists "$HOME/.gitconfig"
+backup_if_exists "$HOME/.claude"
 
 # Stow packages
 cd "$DOTFILES"
-for pkg in "${PACKAGES[@]}"; do
-    if [[ -d "$pkg" ]]; then
-        echo "==> Stowing $pkg"
-        stow "$pkg"
-    fi
+for d in */; do
+    echo "==> Stowing $(basename "$d")"
+    stow "$(basename "$d")"
 done
 
 # Install Oh My Zsh if missing

@@ -44,6 +44,8 @@ zsh/.config/zsh/
 
 After creating new files, run `stow -R zsh` from dotfiles root (or manually symlink).
 
+The `dotsync` alias (defined in `aliases.zsh`) restows all packages by looping over `~/dotfiles/*/`.
+
 ## Claude Code Configuration
 
 User-level Claude Code context in `claude/.claude/`:

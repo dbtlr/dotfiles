@@ -11,6 +11,7 @@ Personal dotfiles managed with [GNU Stow](https://www.gnu.org/software/stow/).
 | `nvim`  | Neovim config with lazy.nvim |
 | `tmux`  | Tmux config |
 | `git`   | Git config |
+| `claude` | Claude Code user-level context |
 
 ## Installation
 
@@ -33,8 +34,18 @@ cd ~/dotfiles
    ```bash
    git clone https://github.com/USERNAME/dotfiles.git ~/dotfiles
    cd ~/dotfiles
-   stow zsh bash nvim tmux git
+   stow zsh bash nvim tmux git claude
    ```
+
+## Syncing
+
+After the initial install, the `dotsync` alias (defined in `aliases.zsh`) restows all packages:
+
+```bash
+dotsync
+```
+
+This loops over every `~/dotfiles/*/` directory so new packages are picked up automatically.
 
 ## Adding New Configs
 
