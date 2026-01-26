@@ -46,6 +46,11 @@ After creating new files, run `stow -R zsh` from dotfiles root (or manually syml
 
 The `dotsync` alias (defined in `aliases.zsh`) restows all packages by looping over `~/dotfiles/*/`.
 
+## Install Script
+
+`install.sh` auto-discovers packages via `*/` glob — no hardcoded package list.
+Verify shell script changes: `bash -n install.sh`
+
 ## Claude Code Configuration
 
 User-level Claude Code context in `claude/.claude/`:
