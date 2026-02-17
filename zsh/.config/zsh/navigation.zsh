@@ -1,4 +1,4 @@
-# Quick navigation to /home/data directories
+# Quick navigation to $CODE_ROOT directories
 CODE_ROOT="~/src"
 
 d() {
@@ -16,7 +16,7 @@ _d_completion() {
 
 compdef _d_completion d
 
-# Open VS Code at /home/data directory
+# Open VS Code at $CODE_ROOT directory
 unalias c 2>/dev/null
 
 c() {

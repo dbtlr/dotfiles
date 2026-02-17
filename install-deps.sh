@@ -80,18 +80,17 @@ main() {
   # === CORE SYSTEM TOOLS ===
   echo -e "${GREEN}Installing Core System Tools...${NC}"
   install_brew "zsh"
-  install_brew "neovim"
+  install_brew "neovim" "nvim"
   install_brew "tree"
   install_brew "jq"
   install_brew "htop"
-  install_brew "postgresql@15"
+  install_brew "postgresql@15" "psql"
   install_brew "bat"
   install_brew "fd"
   install_brew "fzf"
-  install_brew "zoxide"
+  install_brew "zoxide" "z"
   install_brew "gh"
   install_brew "rust"
-  install_brew "zellij"
   echo ""
 
   # === NODEJS & JS TOOLS ===
@@ -127,17 +126,6 @@ main() {
   install_brew "bun"
   echo ""
 
-  # === KUBERNETES & CLOUD TOOLS ===
-  echo -e "${GREEN}Installing Kubernetes & Cloud Tools...${NC}"
-  install_brew "kubectl"
-  echo ""
-
-  # === CONTAINER & INFRASTRUCTURE ===
-  echo -e "${GREEN}Installing Container & Infrastructure Tools...${NC}"
-  install_brew "podman"
-  install_brew "podman-compose"
-  echo ""
-
   # === PYTHON TOOLS ===
   echo -e "${GREEN}Installing Python Tools...${NC}"
   install_brew "python3"
@@ -147,19 +135,23 @@ main() {
   # === OPTIONAL DEV TOOLS ===
   echo -e "${GREEN}Installing Optional Development Tools...${NC}"
   install_brew "tmux"
+  install_brew "zellij"
+  install_brew "agent-browser"
+  install_brew "powerlevel10k"
   echo ""
+
+
+  # === OPTIONAL AI TOOLS ===
+  echo -e "${GREEN}Installing AI Tools...${NC}"
+  install_brew "codex"
+  install_brew "gemini-cli" "gemini"
+  install_brew "anomalyco/tap/opencode" "opencode"
 
   if ! command_exists claude; then
     print_header "Installing Claude"
-
-    if [ "$WSL_DISTRO_NAME" = "linux" ]; then
-      curl -fsSL https://claude.ai/install.sh | bash && \
+    curl -fsSL https://claude.ai/install.sh | bash && \
       print_success "Claude Code installed" || \
       print_error "Failed to install Claude Code"
-    else
-      npm set registry https://artifacts.bamfunds.net/repository/npm/
-      npm install -g @anthropic-ai/claude-code
-    fi
   else
     print_skip "claude"
   fi

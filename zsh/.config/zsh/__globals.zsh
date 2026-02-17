@@ -14,9 +14,9 @@ C_LIGHTGRAY="\033[0;90m"  # Light Gray
 C_DARKGRAY="\033[1;30m"   # Dark Gray
 C_LIGHTRED="\033[1;31m"   # Light Red
 C_LIGHTGREEN="\033[1;32m" # Light Green
-C_LIGHTYELLOW="\033[1;33m"# Light Yellow
+C_LIGHTYELLOW="\033[1;33m" # Light Yellow
 C_LIGHTBLUE="\033[1;34m"  # Light Blue
-C_LIGHTPURPLE="\033[1;35m"# Light Purple
+C_LIGHTPURPLE="\033[1;35m" # Light Purple
 C_LIGHTCYAN="\033[1;36m"  # Light Cyan
 
 # Underline

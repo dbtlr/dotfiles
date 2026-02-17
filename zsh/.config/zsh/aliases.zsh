@@ -1,6 +1,6 @@
 # Basic aliases
-alias ll="ls -lAh --group-directories-first"
-alias la="ls --group-directories-first"
+alias ll="ls -lAh"
+alias la="ls"
 
 # Quick alias to reload zsh configuration
 alias zr="source ~/.zshrc"

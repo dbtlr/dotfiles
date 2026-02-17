@@ -22,5 +22,5 @@ done
 good_morning
 
 # Powerlevel10k theme
-source ~/powerlevel10k/powerlevel10k.zsh-theme
+source /opt/homebrew/share/powerlevel10k/powerlevel10k.zsh-theme
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
