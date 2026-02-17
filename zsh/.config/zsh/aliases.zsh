@@ -1,8 +1,6 @@
-alias ll="ls -lah"
-alias gs="git status"
-alias gd="git diff"
-alias gc="git commit"
-alias gp="git push"
+# Basic aliases
+alias ll="ls -lAh --group-directories-first"
+alias la="ls --group-directories-first"
 
-# Dotfiles management
-alias dotsync='for d in ~/dotfiles/*/; do stow -d ~/dotfiles -t ~ -R "$(basename "$d")"; done'
+# Quick alias to reload zsh configuration
+alias zr="source ~/.zshrc"
