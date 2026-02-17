@@ -17,3 +17,6 @@
 	br = branch
 	ci = commit
 	lg = log --oneline --graph --decorate
+	ps = push
+	p = pull
+	nb = checkout -b
