@@ -47,6 +47,8 @@ for d in */; do
     stow "$(basename "$d")"
 done
 
+
+
 # Install Oh My Zsh if missing
 if [[ ! -d "$HOME/.oh-my-zsh" ]]; then
     echo "==> Installing Oh My Zsh..."
@@ -58,6 +60,33 @@ P10K_DIR="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k"
 if [[ ! -d "$P10K_DIR" ]]; then
     echo "==> Installing Powerlevel10k..."
     git clone --depth=1 https://github.com/romkatv/powerlevel10k.git "$P10K_DIR"
+fi
+
+# Ensure zsh is the default shell
+current_shell="$(getent passwd "$USER" | cut -d: -f7 2>/dev/null || echo "$SHELL")"
+zsh_path="$(command -v zsh || true)"
+if [[ -z "$zsh_path" ]]; then
+    echo "==> zsh not found; skipping default shell change"
+else
+    if [[ ! "$current_shell" =~ zsh$ ]]; then
+        echo "==> Current shell is $current_shell; attempting to set zsh ($zsh_path) as default..."
+        if command -v chsh &>/dev/null; then
+            if chsh -s "$zsh_path" "$USER" 2>/dev/null; then
+                echo "==> Default shell changed to zsh. Please log out and back in."
+            else
+                if command -v sudo &>/dev/null && sudo chsh -s "$zsh_path" "$USER"; then
+                    echo "==> Default shell changed to zsh (via sudo). Please log out and back in."
+                else
+                    echo "==> Could not change default shell automatically. Run:"
+                    echo "    chsh -s $zsh_path"
+                fi
+            fi
+        else
+            echo "==> chsh not available; run: chsh -s $zsh_path"
+        fi
+    else
+        echo "==> zsh is already the default shell."
+    fi
 fi
 
 echo "==> Done! Restart your shell or run: source ~/.zshrc"

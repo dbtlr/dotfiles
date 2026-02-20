@@ -134,6 +134,7 @@ main() {
 
   # === OPTIONAL DEV TOOLS ===
   echo -e "${GREEN}Installing Optional Development Tools...${NC}"
+  install_brew "mosh"
   install_brew "tmux"
   install_brew "zellij"
   install_brew "agent-browser"
