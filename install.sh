@@ -15,17 +15,6 @@ print_error()  { echo -e "${RED}✗  $1${NC}"; }
 print_success() { echo -e "${GREEN}✓  $1${NC}"; }
 command_exists() { command -v "$1" &>/dev/null; }
 
-install_brew_pkg() {
-  local pkg_name="$1"
-  local alt_name="${2:-$1}"
-  if command_exists "$alt_name"; then
-    print_skip "$pkg_name"
-    return 0
-  fi
-  brew install "$pkg_name" || { print_error "Failed to install $pkg_name"; return 1; }
-  print_success "$pkg_name installed"
-}
-
 install_deps() {
   echo ""
   echo "========================================"
@@ -33,8 +22,9 @@ install_deps() {
   echo "========================================"
   echo ""
 
+  # Bootstrap Homebrew
   if ! command_exists brew; then
-    print_header "Installing homebrew"
+    print_header "Installing Homebrew..."
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" && {
       print_success "Homebrew installed"
       eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv zsh)"
@@ -44,77 +34,34 @@ install_deps() {
     print_skip "homebrew"
   fi
 
-  echo -e "${GREEN}Installing Essential Tools...${NC}"
-  install_brew_pkg "bundler-completion"
-  install_brew_pkg "stow"
-  install_brew_pkg "git"
-  install_brew_pkg "curl"
-  install_brew_pkg "wget"
-  install_brew_pkg "perl"
-  install_brew_pkg "openssl"
-  install_brew_pkg "pkg-config"
-  echo ""
+  # Install all brew packages
+  print_header "Installing packages via Brewfile..."
+  brew bundle --file="$DOTFILES/Brewfile"
 
-  echo -e "${GREEN}Installing Core System Tools...${NC}"
-  install_brew_pkg "zsh"
-  install_brew_pkg "neovim" "nvim"
-  install_brew_pkg "tree"
-  install_brew_pkg "jq"
-  install_brew_pkg "htop"
-  install_brew_pkg "postgresql@15" "psql"
-  install_brew_pkg "bat"
-  install_brew_pkg "fd"
-  install_brew_pkg "fzf"
-  install_brew_pkg "zoxide" "z"
-  install_brew_pkg "gh"
-  install_brew_pkg "rust"
-  echo ""
-
-  echo -e "${GREEN}Installing Node.js & JavaScript Tools...${NC}"
-  install_brew_pkg "fnm"
+  # fnm: install Node LTS
   if command_exists fnm; then
     fnm install --lts --log-level=quiet && \
       fnm alias default lts && \
       print_success "Node.js LTS installed" || \
       print_error "Failed to install Node.js LTS"
   else
-    print_error "Cannot install LTS node, fnm not installed"
+    print_error "fnm not found; skipping Node install"
   fi
+
+  # pnpm
   if ! command_exists pnpm; then
-    print_header "Installing pnpm"
     if command_exists npm; then
       npm install -g pnpm && print_success "pnpm installed" || print_error "Failed to install pnpm"
     else
-      print_error "pnpm requires npm. Install Node.js first."
+      print_error "pnpm requires npm — install Node first"
     fi
   else
     print_skip "pnpm"
   fi
-  echo ""
 
-  brew tap oven-sh/bun
-  install_brew_pkg "bun"
-  echo ""
-
-  echo -e "${GREEN}Installing Python Tools...${NC}"
-  install_brew_pkg "python3"
-  install_brew_pkg "uv"
-  echo ""
-
-  echo -e "${GREEN}Installing Optional Development Tools...${NC}"
-  install_brew_pkg "mosh"
-  install_brew_pkg "tmux"
-  install_brew_pkg "zellij"
-  install_brew_pkg "agent-browser"
-  install_brew_pkg "powerlevel10k"
-  echo ""
-
-  echo -e "${GREEN}Installing AI Tools...${NC}"
-  install_brew_pkg "codex"
-  install_brew_pkg "gemini-cli" "gemini"
-  install_brew_pkg "anomalyco/tap/opencode" "opencode"
+  # Claude Code (not in brew)
   if ! command_exists claude; then
-    print_header "Installing Claude"
+    print_header "Installing Claude Code..."
     curl -fsSL https://claude.ai/install.sh | bash && \
       print_success "Claude Code installed" || \
       print_error "Failed to install Claude Code"

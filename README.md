@@ -59,6 +59,14 @@ Then run `dotsync` to pick them up.
 
 ## Dependencies
 
+Brew packages are declared in `Brewfile` at the repo root — this is the canonical list. To install standalone:
+
+```bash
+brew bundle --file=~/dotfiles/Brewfile
+```
+
+Other dependencies:
+
 - [Oh My Zsh](https://ohmyz.sh/)
 - [Powerlevel10k](https://github.com/romkatv/powerlevel10k)
 - [fnm](https://github.com/Schniz/fnm) (Node version manager)
