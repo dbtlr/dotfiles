@@ -103,55 +103,7 @@ update_dev_tools() {
 }
 
 update_brew() {
-  brew update
+  brew update >/dev/null 2>&1 && print_success "Homebrew updated" || print_error "Failed to update Homebrew"
+  brew upgrade >/dev/null 2>&1 && print_success "Homebrew packages upgraded" || print_error "Failed to upgrade Homebrew packages"
   echo ""
-}
-
-check_git_status() {
-  echo "${C_LIGHTGRAY}→  Checking for uncommitted changes in /home/data repos...${NC}"
-
-  local repos_with_changes=()
-
-  for repo in /home/data/*; do
-    if [ -d "$repo/.git" ]; then
-      cd "$repo"
-      if ! git diff-index --quiet HEAD -- 2>/dev/null; then
-        repos_with_changes+=("$repo")
-      fi
-    fi
-  done
-
-  if [ ${#repos_with_changes[@]} -gt 0 ]; then
-    echo "${C_YELLOW}Repos with uncommitted changes:${NC}"
-    for repo in "${repos_with_changes[@]}"; do
-      echo "${C_RED} - $(basename $repo)${NC}"
-    done
-  else
-    echo "${C_GREEN}All repos clean!${NC}"
-  fi
-
-  echo ""
-}
-
-good_morning() {
-  force=$1
-  good_morning_filename=~/.goodmorning
-  today=$(date "+%A, %B %d, %Y")
-
-  if debounce $good_morning_filename $today || [ "$force" = "force" ]; then
-    printf "\n"
-    printf "${C_DARKGRAY}Good Morning ${C_PURPLE}$USER${NC}\n"
-    printf "${C_DARKGRAY}Today is ${C_GREEN}$today${NC}\n"
-    printf "${C_DARKGRAY}Let's run some checks to make sure everything is up to date.${NC}\n"
-    echo ""
-
-    update_brew
-    update_node
-    update_npm_packages
-    update_dev_tools
-    # check_git_status
-
-    echo $today > $good_morning_filename
-    printf "\n"
-  fi
 }

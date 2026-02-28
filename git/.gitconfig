@@ -20,3 +20,4 @@
 	ps = push
 	p = pull
 	nb = checkout -b
+	d = diff
