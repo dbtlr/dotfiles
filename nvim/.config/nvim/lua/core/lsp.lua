@@ -1,7 +1,11 @@
 -- LSP capabilities (completion integration)
 local capabilities = vim.lsp.protocol.make_client_capabilities()
 local ok, cmp = pcall(require, "cmp_nvim_lsp")
-local builtin = require("telescope.builtin")
+-- local builtin = require("telescope.builtin")
+
+vim.keymap.set("n", "gr", function()
+  require("telescope.builtin").lsp_references()
+end)
 
 if ok then
   capabilities = cmp.default_capabilities(capabilities)

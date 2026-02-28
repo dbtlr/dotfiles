@@ -1,3 +1,5 @@
+vim.env.PATH = "/usr/bin:/opt/homebrew/bin:" .. vim.env.PATH
+
 require("core.options")
 require("core.keymaps")
 require("lazy_bootstrap")
