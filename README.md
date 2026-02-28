@@ -2,16 +2,7 @@
 
 Personal dotfiles managed with [GNU Stow](https://www.gnu.org/software/stow/).
 
-## Packages
-
-| Package | Description |
-|---------|-------------|
-| `zsh`   | Zsh config with Oh My Zsh and Powerlevel10k |
-| `bash`  | Bash config |
-| `nvim`  | Neovim config with lazy.nvim |
-| `tmux`  | Tmux config |
-| `git`   | Git config |
-| `claude` | Claude Code user-level context |
+Files live directly under the repo root, mirroring `~`. The `agents/` directory is stowed separately so it doesn't get picked up as project-level Claude config for this repo.
 
 ## Installation
 
@@ -23,36 +14,48 @@ cd ~/dotfiles
 ./install.sh
 ```
 
+Installs dependencies first, then stows dotfiles, Oh My Zsh, Powerlevel10k, and sets the default shell.
+
+To install dependencies only (no dotfiles stowed):
+
+```bash
+./install.sh --deps-only
+```
+
 ### Manual Install
 
 1. Install GNU Stow:
    ```bash
-   sudo apt install stow
+   sudo apt install stow   # or: brew install stow
    ```
 
 2. Clone and stow:
    ```bash
    git clone https://github.com/USERNAME/dotfiles.git ~/dotfiles
    cd ~/dotfiles
-   stow zsh bash nvim tmux git claude
+   stow --no-folding -t ~ .        # main dotfiles
+   stow --no-folding -t ~ agents   # claude config
    ```
 
 ## Syncing
 
-After the initial install, the `dotsync` alias (defined in `aliases.zsh`) restows all packages:
+After the initial install, `dotsync` / `dotunsync` (defined in `.config/zsh/stow.zsh`) restow everything:
 
 ```bash
-dotsync
+dotsync    # restow all dotfiles
+dotunsync  # remove all stow symlinks
 ```
-
-This loops over every `~/dotfiles/*/` directory so new packages are picked up automatically.
 
 ## Adding New Configs
 
-1. Create package directory: `mkdir -p ~/dotfiles/package`
-2. Mirror home directory structure inside package
-3. Move config files to package
-4. Run `stow package`
+Just add files mirroring the home directory structure directly under `~/dotfiles/`:
+
+```
+~/dotfiles/.config/foo/bar.conf   →   ~/.config/foo/bar.conf
+~/dotfiles/.some-tool-rc          →   ~/.some-tool-rc
+```
+
+Then run `dotsync` to pick them up.
 
 ## Dependencies
 
