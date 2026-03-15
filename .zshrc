@@ -2,9 +2,9 @@
 # [[ $- == *i* ]] || return
 
 # Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
-# if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
-#   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
-# fi
+if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+fi
 
 # Local paths
 export PATH="$HOME/.local/bin:$HOME/.bin:/usr/local/bin:$PATH"
@@ -16,7 +16,7 @@ plugins=(kubectl npm python uv bun bundler git)
 source $ZSH/oh-my-zsh.sh
 
 # Load modular configs
-for config_file in ~/.config/zsh/*.zsh(-.N); do
+for config_file in ~/.config/zsh/*.zsh(.N); do
   source $config_file
 done
 
