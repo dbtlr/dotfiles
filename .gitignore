@@ -11,4 +11,4 @@ Thumbs.db
 lazy-lock.json
 
 # Local/machine-specific
-*.local
+*.local.zsh
