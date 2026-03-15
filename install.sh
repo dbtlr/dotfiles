@@ -104,17 +104,6 @@ install_dots() {
     fi
   }
 
-  print_header "Backing up existing configs..."
-  backup_if_exists "$HOME/.zshrc"
-  backup_if_exists "$HOME/.p10k.zsh"
-  backup_if_exists "$HOME/.bashrc"
-  backup_if_exists "$HOME/.profile"
-  backup_if_exists "$HOME/.config/nvim"
-  backup_if_exists "$HOME/.config/tmux"
-  backup_if_exists "$HOME/.config/zsh"
-  backup_if_exists "$HOME/.gitconfig"
-  backup_if_exists "$HOME/.claude"
-
   # Stow dotfiles
   cd "$DOTFILES"
   print_header "Stowing dotfiles..."
