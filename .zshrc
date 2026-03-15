@@ -1,14 +1,9 @@
 # Only run interactive stuff if interactive
 # [[ $- == *i* ]] || return
 
-# Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
-if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
-  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
-fi
-
 # Local paths
 export LOCAL_HOME="/local/dbutler"
-export PATH="$HOME/.local/bin:$HOME/.bin:$LOCAL_HOME/bin:/usr/local/bin:$PATH"
+export PATH="$HOME/.bun/bin:$HOME/.local/bin:$HOME/.bin:$LOCAL_HOME/bin:/usr/local/bin:$PATH"
 export BUN_INSTALL_CACHE_DIR="/home/data/.cache/bun"
 
 # Oh My Zsh
@@ -17,7 +12,7 @@ plugins=(kubectl npm python uv bun bundler git)
 source $ZSH/oh-my-zsh.sh
 
 # Load modular configs
-for config_file in ~/.config/zsh/*.zsh(.N); do
+for config_file in ~/.config/zsh/*.zsh(N); do
   source $config_file
 done
 
