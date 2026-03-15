@@ -26,6 +26,8 @@ brew "gh"
 brew "rust"
 brew "eza"
 brew "ripgrep"
+brew "dust"
+brew "btop"
 
 # Node
 brew "fnm"
