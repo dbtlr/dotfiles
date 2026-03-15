@@ -2,8 +2,7 @@
 # [[ $- == *i* ]] || return
 
 # Local paths
-export LOCAL_HOME="/local/dbutler"
-export PATH="$HOME/.bun/bin:$HOME/.local/bin:$HOME/.bin:$LOCAL_HOME/bin:/usr/local/bin:$PATH"
+export PATH="$HOME/.bun/bin:$HOME/.local/bin:$HOME/.bin:/usr/local/bin:$PATH"
 export BUN_INSTALL_CACHE_DIR="/home/data/.cache/bun"
 
 # Oh My Zsh
@@ -22,9 +21,6 @@ good_morning
 # Powerlevel10k theme
 source $(brew --prefix)/share/powerlevel10k/powerlevel10k.zsh-theme
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
-
-# OpenClaw Completion
-source "/Users/drew/.openclaw/completions/openclaw.zsh"
 
 # pnpm
 export PNPM_HOME="/Users/drew/Library/pnpm"
