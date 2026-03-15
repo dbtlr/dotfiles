@@ -25,6 +25,7 @@ brew "zoxide"
 brew "gh"
 brew "rust"
 brew "eza"
+brew "ripgrep"
 
 # Node
 brew "fnm"
