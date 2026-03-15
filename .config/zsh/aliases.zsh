@@ -1,7 +1,7 @@
 # Basic aliases
-#alias ll="ls -lAh"
-alias ll="ls -lhAGo"
-alias la="ls"
+alias ls='eza'
+alias ll='eza -lah'
+alias lt='eza --tree'
 
 # Quick alias to reload zsh configuration
 alias zr="source ~/.zshrc"

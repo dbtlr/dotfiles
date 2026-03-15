@@ -67,6 +67,7 @@ install_deps() {
   install_brew_pkg "fzf"
   install_brew_pkg "zoxide" "z"
   install_brew_pkg "gh"
+  install_brew_pkg "eza"
   install_brew_pkg "rust"
   echo ""
 
