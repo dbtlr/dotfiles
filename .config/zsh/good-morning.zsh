@@ -5,9 +5,9 @@ good_morning() {
 
   if debounce $good_morning_filename $today || [ "$force" = "force" ]; then
     printf "\n"
-    printf "${C_DARKGRAY}Good Morning ${C_PURPLE}$USER${NC}\n"
-    printf "${C_DARKGRAY}Today is ${C_GREEN}$today${NC}\n"
-    printf "${C_DARKGRAY}Let's run some checks to make sure everything is up to date.${NC}\n"
+    printf "${C_LIGHTGRAY}Good Morning ${C_PURPLE}$USER${NC}\n"
+    printf "${C_LIGHTGRAY}Today is ${C_GREEN}$today${NC}\n"
+    printf "${C_LIGHTGRAY}Let's run some checks to make sure everything is up to date.${NC}\n"
     echo ""
 
     update_brew
