@@ -11,7 +11,7 @@ plugins=(kubectl npm python uv bun bundler git)
 source $ZSH/oh-my-zsh.sh
 
 # Load modular configs
-for config_file in ~/.config/zsh/*.zsh(N); do
+for config_file in ~/.config/zsh/*.zsh(-N); do
   source $config_file
 done
 

@@ -3,6 +3,7 @@ tap "oven-sh/bun"
 tap "anomalyco/tap"
 
 # Essential
+brew "bundler-completion"
 brew "stow"
 brew "git"
 brew "curl"
@@ -47,3 +48,17 @@ brew "lazygit"
 # AI tools
 brew "gemini-cli"
 brew "opencode"
+brew "agent-browser"
+
+brew "docker"
+brew "docker-compose"
+
+brew "fontconfig"
+cask "font-jetbrains-mono-nerd-font"
+cask "font-fira-code-nerd-font"
+cask "font-hack-nerd-font"
+
+cask "raycast"
+cask "visual-studio-code"
+cask "ghostty"
+cask "cmux"
