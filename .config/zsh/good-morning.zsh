@@ -12,6 +12,7 @@ good_morning() {
 
     update_brew
     update_npm_packages
+    claude update
 
     echo $today > $good_morning_filename
     printf "\n"
