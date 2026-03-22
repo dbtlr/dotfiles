@@ -90,18 +90,6 @@ update_node() {
   echo ""
 }
 
-update_dev_tools() {
-  print_header "Updating Claude Code"
-
-  if [ "$WSL_DISTRO_NAME" = "linux" ]; then
-    claude update
-  else
-    npm install -g @anthropic-ai/claude-code@latest >/dev/null 2>&1
-  fi
-
-  echo ""
-}
-
 update_brew() {
   brew update >/dev/null 2>&1 && print_success "Homebrew updated" || print_error "Failed to update Homebrew"
   brew upgrade >/dev/null 2>&1 && print_success "Homebrew packages upgraded" || print_error "Failed to upgrade Homebrew packages"
