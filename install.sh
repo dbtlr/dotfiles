@@ -38,16 +38,6 @@ install_deps() {
   print_header "Installing packages via Brewfile..."
   brew bundle --file="$DOTFILES/Brewfile"
 
-  # fnm: install Node LTS
-  if command_exists fnm; then
-    fnm install --lts --log-level=quiet && \
-      fnm alias default lts && \
-      print_success "Node.js LTS installed" || \
-      print_error "Failed to install Node.js LTS"
-  else
-    print_error "fnm not found; skipping Node install"
-  fi
-
   # pnpm
   if ! command_exists pnpm; then
     if command_exists npm; then
@@ -57,16 +47,6 @@ install_deps() {
     fi
   else
     print_skip "pnpm"
-  fi
-
-  # Claude Code (not in brew)
-  if ! command_exists claude; then
-    print_header "Installing Claude Code..."
-    curl -fsSL https://claude.ai/install.sh | bash && \
-      print_success "Claude Code installed" || \
-      print_error "Failed to install Claude Code"
-  else
-    print_skip "claude"
   fi
 
   echo ""
