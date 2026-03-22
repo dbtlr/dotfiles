@@ -11,10 +11,7 @@ good_morning() {
     echo ""
 
     update_brew
-    # update_node
     update_npm_packages
-    update_dev_tools
-    # check_git_status
 
     echo $today > $good_morning_filename
     printf "\n"
