@@ -44,6 +44,7 @@ brew "tmux"
 brew "zellij"
 brew "powerlevel10k"
 brew "lazygit"
+brew "worktrunk"
 
 # AI tools
 brew "gemini-cli"
