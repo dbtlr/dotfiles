@@ -50,6 +50,7 @@ brew "worktrunk"
 brew "gemini-cli"
 brew "opencode"
 brew "agent-browser"
+cask "claude-code"
 
 brew "docker"
 brew "docker-compose"
