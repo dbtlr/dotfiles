@@ -6,7 +6,7 @@
 
 ### MANDATORY: Load Partner Model First
 
-**Before doing ANYTHING else** — before reading Linear issues, before exploring code, before any task work — load `~/vaults/agents/knowledge/partner_model.md`. This file contains collaboration patterns, communication preferences, and calibration notes that make sessions more effective. Skipping this wastes time through miscommunication and missed context.
+**Before doing ANYTHING else** — before reading Linear issues, before exploring code, before any task work — load `~/data/vaults/agents/knowledge/partner_model.md`. This file contains collaboration patterns, communication preferences, and calibration notes that make sessions more effective. Skipping this wastes time through miscommunication and missed context.
 
 ### MANDATORY: Dev-Log is Always Active
 
@@ -20,7 +20,7 @@ Dev-log is always on. You do not need to be asked. Write a dev log when **any** 
 
 **Do not ask permission.** Do not wait for a prompt. When a milestone hits, run the `/dev-log` skill workflow.
 
-Logs go to `~/vaults/agents/log/`. Use `/dev-log` or say "write a dev log" to trigger manually.
+Logs go to `~/data/vaults/agents/log/`. Use `/dev-log` or say "write a dev log" to trigger manually.
 
 ## Preferences
 

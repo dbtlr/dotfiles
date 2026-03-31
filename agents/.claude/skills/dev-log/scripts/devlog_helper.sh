@@ -3,7 +3,7 @@
 # Dev Log Helper Script (Global)
 # Gathers environmental information for creating per-session dev log entries.
 # Non-interactive: outputs key=value lines for Claude to parse.
-# Log destination: ~/vaults/agents/log/ (global, not project-relative)
+# Log destination: ~/data/vaults/agents/log/ (global, not project-relative)
 
 # 1. Timestamp
 TIMESTAMP=$(date "+%Y-%m-%dT%H:%M%z")
@@ -30,14 +30,14 @@ echo "GIT_DIFF_STAT: $GIT_DIFF_STAT"
 
 # 4. Project manifest path (auto-derived from repo name)
 if [ -n "$GIT_REPO" ]; then
-  PROJECT_MANIFEST_PATH="$HOME/vaults/agents/knowledge/projects/${GIT_REPO}.md"
+  PROJECT_MANIFEST_PATH="$HOME/data/vaults/agents/knowledge/projects/${GIT_REPO}.md"
   echo "PROJECT_MANIFEST_PATH: $PROJECT_MANIFEST_PATH"
 else
   echo "PROJECT_MANIFEST_PATH: (none — not in a git repo)"
 fi
 
 # 5. Log directory setup
-LOG_DIR="$HOME/vaults/agents/log"
+LOG_DIR="$HOME/data/vaults/agents/log"
 WEEK_DIR="$LOG_DIR/${YEAR}_w${WEEK}"
 echo "LOG_DIR: $LOG_DIR"
 echo "WEEK_DIR: $WEEK_DIR"
