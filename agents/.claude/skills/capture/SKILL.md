@@ -74,6 +74,6 @@ Brief summary of what was included (2-3 bullet points) so the user can verify it
 - **Be comprehensive but focused.** Cover the topic thoroughly, but don't include unrelated session work.
 - **Include concrete details.** Commands, config snippets, file paths — the things you'd need to replicate this.
 - **Link to the project.** The frontmatter connects this knowledge to its origin project, making it findable later.
-- **Default domain to Technology.** Most session knowledge is tech. The user can specify otherwise.
+- **Default domain to Development** for coding sessions (patterns, pipelines, frameworks). Use Technology for infrastructure/tooling topics. The user can specify otherwise.
 - **No git operations.** Just write the file. Life Lab's `/inbox` skill handles git when it processes the inbox later.
 - **Don't ask unnecessary questions.** The user said what to capture — do it. Only ask if the topic is genuinely ambiguous.

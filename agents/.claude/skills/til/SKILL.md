@@ -79,6 +79,6 @@ One line. Don't over-report.
 - **Preserve the user's words.** Never rewrite what they said. Agent additions go below, clearly marked.
 - **Enrichment is optional, not mandatory.** Don't always ask — only when you genuinely have useful context to add. If in doubt, skip enrichment and just save.
 - **One TIL per invocation.** If they give you multiple, save multiple files.
-- **Default domain to Technology.** Most TILs from coding sessions are tech.
+- **Default domain to Development** for coding session learnings. Use Technology for infrastructure/tooling topics.
 - **No git operations.** Write the file, that's it. `/inbox` handles the rest later.
 - **Don't overthink the title.** "TIL - cargo-dist generates install scripts.md" is fine. It doesn't need to be a claim or a perfect note title — `/inbox` can rename later.
