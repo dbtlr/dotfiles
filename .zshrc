@@ -19,8 +19,11 @@ done
 good_morning
 
 # Powerlevel10k theme
-source $(brew --prefix)/share/powerlevel10k/powerlevel10k.zsh-theme
-[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+# source $(brew --prefix)/share/powerlevel10k/powerlevel10k.zsh-theme
+# [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+
+# Run starship prompt
+eval "$(starship init zsh)"
 
 # pnpm
 export PNPM_HOME="/Users/drew/Library/pnpm"
@@ -31,3 +34,5 @@ esac
 # pnpm end
 
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+
+. "$HOME/.cargo/env"

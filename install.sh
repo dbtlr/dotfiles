@@ -97,11 +97,11 @@ install_dots() {
   fi
 
   # Install Powerlevel10k if missing
-  P10K_DIR="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k"
-  if [[ ! -d "$P10K_DIR" ]]; then
-    print_header "Installing Powerlevel10k..."
-    git clone --depth=1 https://github.com/romkatv/powerlevel10k.git "$P10K_DIR"
-  fi
+  # P10K_DIR="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k"
+  # if [[ ! -d "$P10K_DIR" ]]; then
+  #   print_header "Installing Powerlevel10k..."
+  #   git clone --depth=1 https://github.com/romkatv/powerlevel10k.git "$P10K_DIR"
+  # fi
 
   # Ensure zsh is the default shell
   current_shell="$(getent passwd "$USER" | cut -d: -f7 2>/dev/null || echo "$SHELL")"

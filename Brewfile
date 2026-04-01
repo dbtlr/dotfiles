@@ -29,6 +29,7 @@ brew "eza"
 brew "ripgrep"
 brew "dust"
 brew "btop"
+brew "starship"
 
 # Node
 brew "fnm"
