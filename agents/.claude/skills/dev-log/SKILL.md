@@ -53,7 +53,7 @@ Load same-day sessions if any exist (script outputs these under `SAME_DAY_SESSIO
 
 If continuing work on a specific issue, find related sessions:
 ```text
-Bash(command: "grep -rl 'ISSUE-ID' ~/vaults/agents/log/ 2>/dev/null", description: "Find sessions for this issue")
+Bash(command: "grep -rl 'ISSUE-ID' ~/data/vaults/agents/log/ 2>/dev/null", description: "Find sessions for this issue")
 ```
 
 ### Step 3 — Read Template
@@ -122,18 +122,18 @@ Conditional sections (add when relevant):
 
 Update these files based on what was learned this session. Take ownership — don't just suggest updates.
 
-**`~/vaults/agents/knowledge/partner_model.md`** — update every session:
+**`~/data/vaults/agents/knowledge/partner_model.md`** — update every session:
 - New observations about collaboration patterns and preferences
 - Calibration notes from this session
 - Communication style discoveries
 
-**`~/vaults/agents/knowledge/patterns.md`** — update when new patterns found:
+**`~/data/vaults/agents/knowledge/patterns.md`** — update when new patterns found:
 - Architectural decisions and rationales
 - TypeScript/JavaScript patterns discovered
 - Common pitfalls and their solutions
 - Implementation examples worth preserving
 
-**`PROJECT_MANIFEST_PATH`** (e.g. `~/vaults/agents/knowledge/projects/my-app.md`) — update every session with that repo:
+**`PROJECT_MANIFEST_PATH`** (e.g. `~/data/vaults/agents/knowledge/projects/my-app.md`) — update every session with that repo:
 - If file doesn't exist, create it using the project manifest template (see below)
 - Tech stack (framework, bundler, DB, ORM, auth, testing)
 - Key file paths (entry points, config files, important modules)
@@ -175,10 +175,10 @@ Update these files based on what was learned this session. Take ownership — do
 ### Step 7 — Commit
 
 ```text
-Bash(command: "git -C ~/vaults/agents add log/ knowledge/ && git -C ~/vaults/agents commit -m 'Session log: [GIT_REPO] brief-description\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>'", description: "Commit dev log and knowledge updates to agents repo")
+Bash(command: "git -C ~/data/vaults/agents add log/ knowledge/ && git -C ~/data/vaults/agents commit -m 'Session log: [GIT_REPO] brief-description\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>'", description: "Commit dev log and knowledge updates to agents repo")
 ```
 
-The `~/vaults/agents/` directory is a git repo that contains both `log/` and `knowledge/` — commit all session artifacts together in one commit.
+The `~/data/vaults/agents/` directory is a git repo that contains both `log/` and `knowledge/` — commit all session artifacts together in one commit.
 
 ## Important Notes
 
