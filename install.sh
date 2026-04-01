@@ -84,12 +84,6 @@ install_dots() {
     fi
   }
 
-  # Stow dotfiles
-  cd "$DOTFILES"
-  print_header "Stowing dotfiles..."
-  stow --no-folding -t ~             .        # main dotfiles
-  stow --no-folding -t ~ -d "$DOTFILES" agents  # claude config
-
   # Install Oh My Zsh if missing
   if [[ ! -d "$HOME/.oh-my-zsh" ]]; then
     print_header "Installing Oh My Zsh..."
@@ -128,6 +122,12 @@ install_dots() {
       echo "==> zsh is already the default shell."
     fi
   fi
+
+  # Stow dotfiles
+  cd "$DOTFILES"
+  print_header "Stowing dotfiles..."
+  stow --no-folding -t ~             .          # main dotfiles
+  stow --no-folding -t ~ -d "$DOTFILES" agents  # claude config
 
   print_success "Done! Restart your shell or run: source ~/.zshrc"
 }
