@@ -3,19 +3,15 @@
 # Dev Log Helper Script (Global)
 # Gathers environmental information for creating per-session dev log entries.
 # Non-interactive: outputs key=value lines for Claude to parse.
-# Log destination: ~/data/vaults/agents/log/ (global, not project-relative)
+# Log destination: ~/data/vaults/Life Lab/Log/ (flat, no weekly subdirs)
 
 # 1. Timestamp
 TIMESTAMP=$(date "+%Y-%m-%dT%H:%M%z")
 echo "TIMESTAMP: $TIMESTAMP"
 
-# 2. Week/date components
-WEEK=$(date "+%V")
-YEAR=$(date "+%Y")
+# 2. Date components
 FILE_DATE=$(date "+%Y-%m-%d")
 FILE_TIME=$(date "+%H%M")
-echo "WEEK: $WEEK"
-echo "YEAR: $YEAR"
 echo "FILE_DATE: $FILE_DATE"
 echo "FILE_TIME: $FILE_TIME"
 
@@ -28,57 +24,45 @@ echo "GIT_REPO: $GIT_REPO"
 echo "GIT_BRANCH: $GIT_BRANCH"
 echo "GIT_DIFF_STAT: $GIT_DIFF_STAT"
 
-# 4. Project manifest path (auto-derived from repo name)
-if [ -n "$GIT_REPO" ]; then
-  PROJECT_MANIFEST_PATH="$HOME/data/vaults/agents/knowledge/projects/${GIT_REPO}.md"
-  echo "PROJECT_MANIFEST_PATH: $PROJECT_MANIFEST_PATH"
-else
-  echo "PROJECT_MANIFEST_PATH: (none — not in a git repo)"
+# 4. Project name from CLAUDE.local.md
+PROJECT_NAME=""
+if [ -n "$GIT_ROOT" ] && [ -f "$GIT_ROOT/CLAUDE.local.md" ]; then
+  PROJECT_NAME=$(grep -m1 '^vault_project:' "$GIT_ROOT/CLAUDE.local.md" 2>/dev/null | sed 's/^vault_project: *//' | xargs)
 fi
 
-# 5. Log directory setup
-LOG_DIR="$HOME/data/vaults/agents/log"
-WEEK_DIR="$LOG_DIR/${YEAR}_w${WEEK}"
+if [ -n "$PROJECT_NAME" ] && [ "$PROJECT_NAME" != "none" ]; then
+  PROJECT_CONTEXT_PATH="$HOME/data/vaults/Life Lab/Projects/$PROJECT_NAME/context.md"
+  echo "PROJECT_NAME: $PROJECT_NAME"
+  echo "PROJECT_CONTEXT_PATH: $PROJECT_CONTEXT_PATH"
+else
+  echo "PROJECT_NAME: (none)"
+  echo "PROJECT_CONTEXT_PATH: (none)"
+fi
+
+# 5. Log directory (flat)
+LOG_DIR="$HOME/data/vaults/Life Lab/Log"
 echo "LOG_DIR: $LOG_DIR"
-echo "WEEK_DIR: $WEEK_DIR"
 
-# Create week directory if needed
-if [ ! -d "$WEEK_DIR" ]; then
-  mkdir -p "$WEEK_DIR"
-  echo "WEEK_DIR_CREATED: true"
-else
-  echo "WEEK_DIR_EXISTS: true"
+# Create log directory if needed
+if [ ! -d "$LOG_DIR" ]; then
+  mkdir -p "$LOG_DIR"
+  echo "LOG_DIR_CREATED: true"
 fi
 
-# 6. List existing sessions this week
-echo "CURRENT_WEEK_SESSIONS:"
-if [ -d "$WEEK_DIR" ]; then
-  ls -1 "$WEEK_DIR" 2>/dev/null | while read -r session; do
+# 6. List recent sessions (last 10)
+echo "RECENT_SESSIONS:"
+if [ -d "$LOG_DIR" ]; then
+  ls -1t "$LOG_DIR" 2>/dev/null | head -10 | while read -r session; do
     echo "  - $session"
   done
 fi
 
-# 7. Find most recent previous session (across all weeks)
+# 7. Find most recent previous session
 PREV_SESSION_PATH=""
-LATEST_IN_WEEK=""
+LATEST=$(ls -t "$LOG_DIR" 2>/dev/null | head -1)
 
-if [ -d "$WEEK_DIR" ]; then
-  LATEST_IN_WEEK=$(ls -t "$WEEK_DIR" 2>/dev/null | head -1)
-fi
-
-if [ -n "$LATEST_IN_WEEK" ]; then
-  PREV_SESSION_PATH="$WEEK_DIR/$LATEST_IN_WEEK"
-else
-  # Check previous week directories
-  for week_dir in $(ls -dt "$LOG_DIR"/????_w?? 2>/dev/null); do
-    if [ "$week_dir" != "$WEEK_DIR" ]; then
-      LATEST=$(ls -t "$week_dir" 2>/dev/null | head -1)
-      if [ -n "$LATEST" ]; then
-        PREV_SESSION_PATH="$week_dir/$LATEST"
-        break
-      fi
-    fi
-  done
+if [ -n "$LATEST" ]; then
+  PREV_SESSION_PATH="$LOG_DIR/$LATEST"
 fi
 
 if [ -n "$PREV_SESSION_PATH" ] && [ -f "$PREV_SESSION_PATH" ]; then
@@ -90,9 +74,9 @@ fi
 
 # 8. Same-day sessions
 echo "SAME_DAY_SESSIONS:"
-if [ -d "$WEEK_DIR" ]; then
-  ls -1 "$WEEK_DIR" 2>/dev/null | grep "^${FILE_DATE}" | while read -r session; do
-    echo "  - $WEEK_DIR/$session"
+if [ -d "$LOG_DIR" ]; then
+  ls -1 "$LOG_DIR" 2>/dev/null | grep "^${FILE_DATE}" | while read -r session; do
+    echo "  - $LOG_DIR/$session"
   done
 fi
 
@@ -115,12 +99,12 @@ echo "Filename format:"
 echo "  With issues:    ${FILE_DATE}_${FILE_TIME}_ISSUES_DESCRIPTION.md"
 echo "  Without issues: ${FILE_DATE}_${FILE_TIME}_DESCRIPTION.md"
 echo ""
-echo "SESSION_FILE_PATH will be: ${WEEK_DIR}/[filename]"
+echo "SESSION_FILE_PATH will be: ${LOG_DIR}/[filename]"
 
 echo ""
 echo "=== Loading Recommendations ==="
 echo "LOAD_PREVIOUS: true (always load immediately previous session)"
-if [ -n "$(ls -1 "$WEEK_DIR" 2>/dev/null | grep "^${FILE_DATE}")" ]; then
+if [ -n "$(ls -1 "$LOG_DIR" 2>/dev/null | grep "^${FILE_DATE}")" ]; then
   echo "LOAD_SAME_DAY: true (found other sessions from today)"
 fi
 
