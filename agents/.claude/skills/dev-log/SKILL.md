@@ -1,30 +1,30 @@
 ---
 name: devlog
-description: "Two subcommands: 'init' bootstraps a project's Life Lab integration (context, permissions, gitignore) and loads project context every session. 'write' creates a comprehensive dev log entry and updates shared knowledge files. Run as /devlog init <name> or /devlog write."
+description: "Two subcommands: 'init' bootstraps a project's life-lab integration (context, permissions, gitignore) and loads project context every session. 'write' creates a comprehensive dev log entry and updates shared knowledge files. Run as /devlog init <name> or /devlog write."
 ---
 
 # Dev-Log Skill
 
-Two subcommands for Life Lab vault integration:
+Two subcommands for life-lab vault integration:
 - **`/devlog init <project name>`** — Bootstrap and load project context
 - **`/devlog write`** — Write a session log and update knowledge files
 
-All artifacts live in the Life Lab vault at `~/data/vaults/Life Lab/`.
+All artifacts live in the life-lab vault at `~/data/vaults/life-lab/`.
 
 ---
 
 ## `/devlog init <project name>`
 
-**MANDATORY on every session start for bootstrapped projects.** This command is called from `CLAUDE.local.md` before any other work. It ensures the project is correctly wired to Life Lab and loads all project context into the session.
+**MANDATORY on every session start for bootstrapped projects.** This command is called from `CLAUDE.local.md` before any other work. It ensures the project is correctly wired to life-lab and loads all project context into the session.
 
 ### Step 1 — Resolve Project Name
 
-The `<project name>` argument is the Life Lab project name. Match it against `~/data/vaults/Life Lab/Projects/`:
+The `<project name>` argument is the life-lab project name. Match it against `~/data/vaults/life-lab/Projects/`:
 
 1. **Exact match** → use it
 2. **Case-insensitive or substring match** → ask user: "Did you mean {X}?"
-3. **No match** → ask user: "Create new project '{name}' in Life Lab, or no project for this repo?"
-   - If creating new: `mkdir -p ~/data/vaults/Life\ Lab/Projects/{name}` and create `context.md` from template (see below)
+3. **No match** → ask user: "Create new project '{name}' in life-lab, or no project for this repo?"
+   - If creating new: `mkdir -p ~/data/vaults/life-lab/Projects/{name}` and create `context.md` from template (see below)
    - If no project: use `vault_project: none` — log-only mode
 
 ### Step 2 — Write/Repair CLAUDE.local.md
@@ -36,9 +36,11 @@ Write the following content (replace `{ProjectName}` and `{ProjectPath}`):
 ```markdown
 # Project: {ProjectName}
 
-## MANDATORY: Life Lab Integration
+## MANDATORY: life-lab Integration
 
 vault_project: {ProjectName}
+
+**Subagent exclusion:** If you were dispatched as a subagent (via the Agent tool) with a specific task, **skip all mandatory sections in this file.** Do not run `/devlog init`, do not load context, do not write devlogs, do not update the life-lab vault. Focus only on your assigned task. The controller session handles all vault integration.
 
 **Before doing ANYTHING else in this session**, run: `/devlog init {ProjectName}`
 
@@ -48,17 +50,17 @@ This loads project context, ensures permissions, and prepares the session for lo
 
 After init completes, immediately read:
 ```
-~/data/vaults/Life Lab/Projects/{ProjectName}/context.md
+~/data/vaults/life-lab/Projects/{ProjectName}/context.md
 ```
 
 This file contains the current state of the project, what's next, open questions, and learnings from previous sessions. **Do not skip this.** Working without context wastes time rediscovering things previous sessions already learned.
 
 ## Project Artifact Paths
 
-Write all plans, specs, and research to the Life Lab vault — **not** to this repo:
-- Plans: `~/data/vaults/Life Lab/Projects/{ProjectName}/plans/`
-- Specs: `~/data/vaults/Life Lab/Projects/{ProjectName}/specs/`
-- Research: `~/data/vaults/Life Lab/Projects/{ProjectName}/research/`
+Write all plans, specs, and research to the life-lab vault — **not** to this repo:
+- Plans: `~/data/vaults/life-lab/Projects/{ProjectName}/plans/`
+- Specs: `~/data/vaults/life-lab/Projects/{ProjectName}/specs/`
+- Research: `~/data/vaults/life-lab/Projects/{ProjectName}/research/`
 
 ## Dev Log Frontmatter
 
@@ -73,7 +75,9 @@ date: YYYY-MM-DD
 
 ## MANDATORY: Dev-Log is Always Active
 
-Dev-log is always on. You do not need to be asked. Write a dev log (`/devlog write`) when **any** of these milestones occur:
+**Subagent exclusion:** These devlog and context-loading instructions apply ONLY to the primary interactive session. If you were dispatched as a subagent with a specific task description (via the Agent tool), **skip all of this** — do not run `/devlog init`, do not run `/devlog write`, do not read or update `context.md`, do not update `partner_model.md`, do not write to the life-lab vault. Your job is implementation only. The controller session handles all logging and knowledge updates.
+
+Dev-log is always on for the primary session. You do not need to be asked. Write a dev log (`/devlog write`) when **any** of these milestones occur:
 
 - **Task completion** — a feature, bugfix, refactor, or investigation is finished
 - **Session wrap-up** — user signals they're done ("that's all", "good session", "wrap up", "done for now")
@@ -95,12 +99,15 @@ Check if `.claude/settings.local.json` exists with the required permissions. If 
 {
   "permissions": {
     "allow": [
-      "Read(~/data/vaults/Life Lab/Log/**)",
-      "Write(~/data/vaults/Life Lab/Log/**)",
-      "Edit(~/data/vaults/Life Lab/Log/**)",
-      "Read(~/data/vaults/Life Lab/Projects/{ProjectName}/**)",
-      "Write(~/data/vaults/Life Lab/Projects/{ProjectName}/**)",
-      "Edit(~/data/vaults/Life Lab/Projects/{ProjectName}/**)"
+      "Read(~/data/vaults/life-lab/Log/**)",
+      "Write(~/data/vaults/life-lab/Log/**)",
+      "Edit(~/data/vaults/life-lab/Log/**)",
+      "Read(~/data/vaults/life-lab/Projects/{ProjectName}/**)",
+      "Write(~/data/vaults/life-lab/Projects/{ProjectName}/**)",
+      "Edit(~/data/vaults/life-lab/Projects/{ProjectName}/**)",
+      "Read(~/data/vaults/life-lab/System/**)",
+      "Write(~/data/vaults/life-lab/System/logs/**)",
+      "Edit(~/data/vaults/life-lab/System/logs/**)"
     ]
   }
 }
@@ -108,7 +115,7 @@ Check if `.claude/settings.local.json` exists with the required permissions. If 
 
 If `vault_project: none`, only include the `Log/` permissions.
 
-If the file already exists with other permissions, **merge** — add the Life Lab entries without removing existing ones.
+If the file already exists with other permissions, **merge** — add the life-lab entries without removing existing ones.
 
 ### Step 4 — Ensure Gitignore
 
@@ -119,17 +126,17 @@ Check `.gitignore` for `CLAUDE.local.md` and `.claude/settings.local.json`. Add 
 If the project was already initialized (CLAUDE.local.md existed and was correct), output the following into context so the agent has it immediately:
 
 ```
-✓ Life Lab project: {ProjectName}
-  Context: ~/data/vaults/Life Lab/Projects/{ProjectName}/context.md
-  Plans:   ~/data/vaults/Life Lab/Projects/{ProjectName}/plans/
-  Specs:   ~/data/vaults/Life Lab/Projects/{ProjectName}/specs/
-  Research:~/data/vaults/Life Lab/Projects/{ProjectName}/research/
-  Logs:    ~/data/vaults/Life Lab/Log/
+✓ life-lab project: {ProjectName}
+  Context: ~/data/vaults/life-lab/Projects/{ProjectName}/context.md
+  Plans:   ~/data/vaults/life-lab/Projects/{ProjectName}/plans/
+  Specs:   ~/data/vaults/life-lab/Projects/{ProjectName}/specs/
+  Research:~/data/vaults/life-lab/Projects/{ProjectName}/research/
+  Logs:    ~/data/vaults/life-lab/Log/
 
 Now read the context.md file to load project state.
 ```
 
-Then **immediately read** `~/data/vaults/Life Lab/Projects/{ProjectName}/context.md`.
+Then **immediately read** `~/data/vaults/life-lab/Projects/{ProjectName}/context.md`.
 
 ---
 
@@ -171,7 +178,7 @@ Load same-day sessions if any exist (script outputs these under `SAME_DAY_SESSIO
 
 If continuing work on a specific issue, find related sessions:
 ```text
-Bash(command: "grep -rl 'ISSUE-ID' ~/data/vaults/Life\ Lab/Log/ 2>/dev/null", description: "Find sessions for this issue")
+Bash(command: "grep -rl 'ISSUE-ID' ~/data/vaults/life-lab/Log/ 2>/dev/null", description: "Find sessions for this issue")
 ```
 
 ### Step 3 — Read Template
@@ -252,7 +259,7 @@ Conditional sections (add when relevant):
 
 Update these files based on what was learned this session. Take ownership — don't just suggest updates.
 
-**`~/data/vaults/Life Lab/System/partner_model.md`** — update every session:
+**`~/data/vaults/life-lab/System/partner_model.md`** — update every session:
 - New observations about collaboration patterns and preferences
 - Calibration notes from this session
 - Communication style discoveries
@@ -298,13 +305,13 @@ Update these files based on what was learned this session. Take ownership — do
 - (immediate next step)
 
 ## Recent Sessions
-- [DATE description](~/data/vaults/Life Lab/Log/log-file.md) — one-line summary
+- [DATE description](~/data/vaults/life-lab/Log/log-file.md) — one-line summary
 ```
 
 ### Step 7 — Commit
 
 ```text
-Bash(command: "git -C \"$HOME/data/vaults/Life Lab\" add Log/ System/ Projects/ && git -C \"$HOME/data/vaults/Life Lab\" commit -m 'vault(dev-log): [GIT_REPO] brief-description' && git -C \"$HOME/data/vaults/Life Lab\" push", description: "Commit and push dev log and knowledge updates to Life Lab vault")
+Bash(command: "git -C \"$HOME/data/vaults/life-lab\" add Log/ System/ Projects/ && git -C \"$HOME/data/vaults/life-lab\" commit -m 'vault(dev-log): [GIT_REPO] brief-description' && git -C \"$HOME/data/vaults/life-lab\" push", description: "Commit and push dev log and knowledge updates to life-lab vault")
 ```
 
 If nothing to commit (clean tree), skip silently.
