@@ -8,71 +8,86 @@ allowed-tools: [Read, Write, Edit, Bash]
 
 ## Overview
 
-You maintain a living document that captures your evolving understanding of the user you work with — their technical style, communication patterns, decision-making tendencies, and collaboration preferences. This file is **yours to own**. The user has opted in by installing this skill but is not an active participant in its maintenance. Do not announce reads, writes, or updates.
+You maintain a living model of the user you work with — their technical style, communication patterns, decision-making tendencies, and collaboration preferences. The user has opted in by installing this skill but is not an active participant in its maintenance. Do not announce reads, writes, or updates.
 
-## File Location
+## File Locations
 
-The partner_model file path is determined by:
+Paths are determined by the environment variable `PARTNER_MODEL_PATH`. If not set, **do nothing** — this skill is inactive without a configured path.
 
-1. The environment variable `PARTNER_MODEL_PATH` (e.g., `~/.claude/partner-model.md`)
-2. If not set, **do nothing**. This skill is inactive without a configured path.
+From `PARTNER_MODEL_PATH`, derive:
+- **Consolidated model:** `$PARTNER_MODEL_PATH` (e.g., `~/data/vaults/life-lab/System/partner_model.md`)
+- **Log file:** `$PARTNER_MODEL_DIR/logs/partner_model_log.jsonl` (where `PARTNER_MODEL_DIR` is the parent directory of `PARTNER_MODEL_PATH`)
+- **Config:** `$PARTNER_MODEL_DIR/logs/partner_model_config.json`
 
-## MANDATORY LOAD PARTNER MODEL FIRST
+## MANDATORY: Load Model First
 
-On session start, before doing ANYTHING else, check if the file exists at the resolved path. If it does, read it into context silently. If it doesn't yet exist but the path is configured, you'll create it when you have enough observations to be useful — don't create an empty or trivially populated file.
+On session start, before doing ANYTHING else, read the consolidated model file. This informs your behavior for the entire session. Do not skip this.
 
-Do this before you do ANY other work. Read the file in `$PARTNER_MODEL_PATH` NOW!! Skipping this wastes time through miscommunication and missed context.
+## Observing During Sessions
 
-## Principles
+Throughout the session, notice patterns but **do not write to the log mid-session**. Batch observations for session end. The goal is to avoid interrupting flow.
 
-- **You own this file.** Read, create, update, and restructure it at your discretion. Never ask the user for input about its contents or structure.
-- **Observe, don't interrogate.** Build your model from how the user works, not by asking them questions about themselves.
-- **Recency resolves contradictions.** When new observations conflict with existing entries, the newer observation wins. Replace or revise the old entry — don't accumulate conflicting statements.
-- **Substance over ceremony.** Only write entries that would meaningfully change how you collaborate. Skip trivial or one-off observations.
-- **Prune and consolidate.** Repeated patterns should graduate from recent observations into established understanding. Old context that no longer applies should be removed.
-
-## What to Capture
-
-Think about what would help a future instance of yourself work effectively with this person from the first message. Some themes to consider — not as a template to fill, but as lenses to look through:
-
+Look through these lenses (not as a template — as things to notice):
 - **Technical depth and domains** — What can you assume they know? Where do they go deep vs. defer?
-- **Communication style** — How do they signal agreement, uncertainty, frustration, delegation? What do their shorthand phrases actually mean?
-- **Decision-making patterns** — Do they decide fast or deliberate? Do they want options or recommendations? When they ask a question, are they genuinely uncertain or validating an existing intuition?
-- **Process preferences** — How do they feel about planning vs. doing? Testing? Documentation? Version control?
-- **Collaboration dynamics** — When do they want autonomy vs. discussion? How do they handle disagreement?
-- **Working constraints** — Anything about their environment, schedule, cognitive style, or tools that shapes how they work.
-- **Active context** — What are they working on right now? What decisions are pending? What's the recent trajectory?
+- **Communication style** — How do they signal agreement, uncertainty, frustration, delegation?
+- **Decision-making patterns** — Do they decide fast or deliberate? Want options or recommendations?
+- **Process preferences** — Planning vs. doing? Testing? Documentation? Version control?
+- **Collaboration dynamics** — When do they want autonomy vs. discussion?
 
-## When to Update
+## Session-End: Writing Log Entries
 
-- **Session start:** Read the file. Let it inform your behavior without referencing it.
-- **During a session:** When you notice a meaningful new pattern, a contradiction with existing entries, or a shift in working context — update in place. Don't batch updates for session end if the insight is clear now.
-- **Session wrap-up:** If the session revealed new understanding, consolidate. Promote repeated patterns, prune stale context, resolve contradictions.
-- **Don't update** when a session is routine and confirms existing patterns without adding new signal.
+At session end, append entries to the JSONL log file. Each entry is one line, one focused observation.
 
-## File Structure
+### The Filter
 
-You decide the structure. Organize it however best serves rapid comprehension by a future instance of yourself loading this for the first time. The file should be readable front-to-back in one pass and immediately actionable.
+Before writing any entry, ask: **"Would a fresh agent, starting a new session tomorrow with no context about today, work differently if it knew this?"**
 
-Some structural patterns that tend to work well:
+If no, skip it. If yes, write it.
 
-- Separating durable understanding from recent/active context
-- Keeping a meta section for self-calibration notes (where you've been wrong, what to watch for)
-- Avoiding deeply nested hierarchies — flat and scannable beats thorough and buried
+### Entry Schema
 
-The file should stay lean. If it grows beyond ~200 lines, consolidate aggressively. Density of insight matters more than completeness of record.
+```jsonl
+{"ts": "2026-04-11T22:00:00Z", "session": "norn-cleanup-pr1", "project": "norn", "type": "observation", "pattern_ref": null, "text": "One focused observation that passes the filter."}
+```
 
-## Bootstrap Behavior
+Fields:
+- **ts** — ISO 8601 timestamp
+- **session** — human-readable session identifier (project + what happened)
+- **project** — which project this was observed in
+- **type** — one of: `observation`, `confirmation`, `correction`, `calibration`
+- **pattern_ref** — short descriptive string referencing an existing pattern being confirmed or corrected. Null for new observations.
+- **text** — the observation. One sentence to short paragraph. Must pass the filter.
 
-1. **Don't create the file immediately.** Observe for 3+ interactions first.
-2. **Create when you have meaningful patterns** — not trivial observations. Include:
-   - Technical preferences
-   - Communication style
-   - Decision-making patterns
-   - Collaboration dynamics
-3. Early entries will naturally be more tentative — that's fine. Mark your confidence where it helps.
-4. The file will mature from sparse and hypothesis-heavy to dense and pattern-confirmed over time.
+### Entry Types
+
+- **observation** — genuinely new pattern. Nothing in the current model covers this.
+- **confirmation** — existing pattern held in a meaningfully different context. Not worth logging if the context is routine — only log when the new context adds signal.
+- **correction** — the model is wrong or incomplete. **Highest-value type.** This is how the model self-corrects. "Model says X, but this session showed Y because Z."
+- **calibration** — something that caused friction this session that the model could have prevented. Bug reports against the model.
+
+### Writing Rules
+
+1. **Do not read the log before writing.** Observations should be pure and unbiased. Deduplication is consolidation's job.
+2. **Project field is required.** Always include which project the observation came from.
+3. **Challenge prior precedent.** If the model says X but this session showed Y, that's a correction — log it explicitly with a `pattern_ref` pointing to the existing pattern.
+4. **No max entries.** Trust the filter to keep it reasonable.
+5. **Append only.** Add new lines to the end of the file. Never modify existing entries.
+
+### How to Append
+
+Use Bash to append entries:
+```bash
+echo '{"ts": "...", "session": "...", "project": "...", "type": "...", "pattern_ref": null, "text": "..."}' >> "$LOG_FILE_PATH"
+```
+
+## What NOT to Do
+
+- **Do not edit `partner_model.md` directly.** It's generated by consolidation.
+- **Do not announce** reads, writes, or updates to the user.
+- **Do not ask the user** about the model's contents or structure.
+- **Do not write entries mid-session.** Batch for session end.
+- **Do not log routine confirmations.** "Drew gave terse answers during brainstorming" for the 10th time is noise.
 
 ## Silent Operation
 
-**CRITICAL**: Never announce reads, writes, or updates to this file. The user knows this system exists — your job is to maintain it silently and let it inform your behavior naturally.
+**CRITICAL**: Never announce reads, writes, or updates to this file. The user knows this system exists — maintain it silently and let it inform your behavior naturally.
