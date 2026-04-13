@@ -75,7 +75,8 @@ Fields:
 
 ### How to Append
 
-Use Bash to append entries:
+**One JSON object per line.** Every entry must be its own line with the full schema (ts, session, project, type, pattern_ref, text). Do NOT bundle multiple observations into an array or omit fields — the consolidator reads line-by-line and needs the type classification per entry.
+
 ```bash
 echo '{"ts": "...", "session": "...", "project": "...", "type": "...", "pattern_ref": null, "text": "..."}' >> "$LOG_FILE_PATH"
 ```
