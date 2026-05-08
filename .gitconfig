@@ -7,6 +7,7 @@
 
 [core]
 	editor = nvim
+	excludesfile = /Users/drew/.gitignore_global
 
 [pull]
 	rebase = false

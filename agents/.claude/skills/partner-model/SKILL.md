@@ -15,7 +15,7 @@ You maintain a living model of the user you work with — their technical style,
 Paths are determined by the environment variable `PARTNER_MODEL_PATH`. If not set, **do nothing** — this skill is inactive without a configured path.
 
 From `PARTNER_MODEL_PATH`, derive:
-- **Consolidated model:** `$PARTNER_MODEL_PATH` (e.g., `~/data/vaults/life-lab/System/partner_model.md`)
+- **Consolidated model:** `$PARTNER_MODEL_PATH` (e.g., `~/vaults/atlas/System/partner_model.md`)
 - **Log file:** `$PARTNER_MODEL_DIR/logs/partner_model_log.jsonl` (where `PARTNER_MODEL_DIR` is the parent directory of `PARTNER_MODEL_PATH`)
 - **Config:** `$PARTNER_MODEL_DIR/logs/partner_model_config.json`
 

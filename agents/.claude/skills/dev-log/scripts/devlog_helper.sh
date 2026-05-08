@@ -3,7 +3,7 @@
 # Dev Log Helper Script (Global)
 # Gathers environmental information for creating per-session dev log entries.
 # Non-interactive: outputs key=value lines for Claude to parse.
-# Log destination: ~/data/vaults/Life Lab/Log/ (flat, no weekly subdirs)
+# Log destination: ~/vaults/atlas/Log/ (flat, no weekly subdirs)
 
 # 1. Timestamp
 TIMESTAMP=$(date "+%Y-%m-%dT%H:%M%z")
@@ -31,7 +31,7 @@ if [ -n "$GIT_ROOT" ] && [ -f "$GIT_ROOT/CLAUDE.local.md" ]; then
 fi
 
 if [ -n "$PROJECT_NAME" ] && [ "$PROJECT_NAME" != "none" ]; then
-  PROJECT_CONTEXT_PATH="$HOME/data/vaults/Life Lab/Projects/$PROJECT_NAME/context.md"
+  PROJECT_CONTEXT_PATH="$HOME/vaults/atlas/Projects/$PROJECT_NAME/$PROJECT_NAME.md"
   echo "PROJECT_NAME: $PROJECT_NAME"
   echo "PROJECT_CONTEXT_PATH: $PROJECT_CONTEXT_PATH"
 else
@@ -40,7 +40,7 @@ else
 fi
 
 # 5. Log directory (flat)
-LOG_DIR="$HOME/data/vaults/Life Lab/Log"
+LOG_DIR="$HOME/vaults/atlas/Log"
 echo "LOG_DIR: $LOG_DIR"
 
 # Create log directory if needed

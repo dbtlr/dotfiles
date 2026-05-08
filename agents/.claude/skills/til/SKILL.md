@@ -1,11 +1,11 @@
 ---
 name: til
-description: Quick "Today I Learned" capture to the Life Lab vault. Use this skill when the user says "til", "TIL", "today I learned", or shares a quick learning, tip, or discovery they want to remember. This is fast personal capture — the user's words go straight to the vault inbox with minimal processing. For agent-synthesized knowledge writeups, use /capture instead.
+description: Quick "Today I Learned" capture to the atlas vault. Use this skill when the user says "til", "TIL", "today I learned", or shares a quick learning, tip, or discovery they want to remember. This is fast personal capture — the user's words go straight to the vault inbox with minimal processing. For agent-synthesized knowledge writeups, use /capture instead.
 ---
 
 # TIL — Today I Learned
 
-Quick-capture a learning to the Life Lab vault inbox. Your words, minimal processing, into the vault.
+Quick-capture a learning to the atlas vault inbox. Your words, minimal processing, into the vault.
 
 ## Why This Skill Exists
 
@@ -45,16 +45,17 @@ If the agent has relevant session context that would make the TIL more useful, p
 - The agent has no meaningful context to add
 - The learning is self-explanatory ("til: `cmd+shift+p` opens command palette")
 
-### Step 4: Write to Life Lab Inbox
+### Step 4: Write to atlas Inbox
 
-Create the file at `~/data/vaults/Life Lab/Inbox/TIL - [short-title].md`:
+Create the file at `~/vaults/atlas/Inbox/TIL - [short-title].md`:
 
 ```yaml
 ---
 type: note
-created: YYYY-MM-DD
+created: YYYY-MM-DDTHH:mm
+modified: YYYY-MM-DDTHH:mm
 domain: Technology
-project: [detected project name]
+projects: [detected project name]
 source: conversation
 ---
 
@@ -65,11 +66,13 @@ source: conversation
 [--- agent context below, if approved ---]
 ```
 
+Use the current timestamp (ISO 8601 with minute precision) for both `created:` and `modified:`. Get it via `date +%Y-%m-%dT%H:%M` — both fields take the same value at creation time.
+
 Generate a short title from the user's text (5-8 words max) for the filename.
 
 ### Step 5: Confirm
 
-"TIL saved to Life Lab inbox."
+"TIL saved to atlas inbox."
 
 One line. Don't over-report.
 

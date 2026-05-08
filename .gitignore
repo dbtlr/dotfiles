@@ -12,3 +12,5 @@ lazy-lock.json
 
 # Local/machine-specific
 *.local.zsh
+
+.claude/settings.local.json

@@ -1,30 +1,30 @@
 ---
 name: devlog
-description: "Two subcommands: 'init' bootstraps a project's life-lab integration (context, permissions, gitignore) and loads project context every session. 'write' creates a comprehensive dev log entry and updates shared knowledge files. Run as /devlog init <name> or /devlog write."
+description: "Two subcommands: 'init' bootstraps a project's atlas integration (context, permissions, gitignore) and loads project context every session. 'write' creates a comprehensive dev log entry and updates shared knowledge files. Run as /devlog init <name> or /devlog write."
 ---
 
 # Dev-Log Skill
 
-Two subcommands for life-lab vault integration:
+Two subcommands for atlas vault integration:
 - **`/devlog init <project name>`** — Bootstrap and load project context
 - **`/devlog write`** — Write a session log and update knowledge files
 
-All artifacts live in the life-lab vault at `~/data/vaults/life-lab/`.
+All artifacts live in the atlas vault at `~/vaults/atlas/`.
 
 ---
 
 ## `/devlog init <project name>`
 
-**MANDATORY on every session start for bootstrapped projects.** This command is called from `CLAUDE.local.md` before any other work. It ensures the project is correctly wired to life-lab and loads all project context into the session.
+**MANDATORY on every session start for bootstrapped projects.** This command is called from `CLAUDE.local.md` before any other work. It ensures the project is correctly wired to atlas and loads all project context into the session.
 
 ### Step 1 — Resolve Project Name
 
-The `<project name>` argument is the life-lab project name. Match it against `~/data/vaults/life-lab/Projects/`:
+The `<project name>` argument is the atlas project name. Match it against `~/vaults/atlas/Projects/`:
 
 1. **Exact match** → use it
 2. **Case-insensitive or substring match** → ask user: "Did you mean {X}?"
-3. **No match** → ask user: "Create new project '{name}' in life-lab, or no project for this repo?"
-   - If creating new: `mkdir -p ~/data/vaults/life-lab/Projects/{name}` and create `context.md` from template (see below)
+3. **No match** → ask user: "Create new project '{name}' in atlas, or no project for this repo?"
+   - If creating new: `mkdir -p ~/vaults/atlas/Projects/{name}/{epics,tasks,notes}` and create `{name}.md` from the `_project.md` template (canonical entity note with above/below horizontal-rule split). Optionally seed an empty `task-board.md`.
    - If no project: use `vault_project: none` — log-only mode
 
 ### Step 2 — Write/Repair CLAUDE.local.md
@@ -36,11 +36,11 @@ Write the following content (replace `{ProjectName}` and `{ProjectPath}`):
 ```markdown
 # Project: {ProjectName}
 
-## MANDATORY: life-lab Integration
+## MANDATORY: atlas Integration
 
 vault_project: {ProjectName}
 
-**Subagent exclusion:** If you were dispatched as a subagent (via the Agent tool) with a specific task, **skip all mandatory sections in this file.** Do not run `/devlog init`, do not load context, do not write devlogs, do not update the life-lab vault. Focus only on your assigned task. The controller session handles all vault integration.
+**Subagent exclusion:** If you were dispatched as a subagent (via the Agent tool) with a specific task, **skip all mandatory sections in this file.** Do not run `/devlog init`, do not load context, do not write devlogs, do not update the atlas vault. Focus only on your assigned task. The controller session handles all vault integration.
 
 **Before doing ANYTHING else in this session**, run: `/devlog init {ProjectName}`
 
@@ -50,17 +50,17 @@ This loads project context, ensures permissions, and prepares the session for lo
 
 After init completes, immediately read:
 ```
-~/data/vaults/life-lab/Projects/{ProjectName}/context.md
+~/vaults/atlas/Projects/{ProjectName}/{ProjectName}.md
 ```
 
-This file contains the current state of the project, what's next, open questions, and learnings from previous sessions. **Do not skip this.** Working without context wastes time rediscovering things previous sessions already learned.
+This is the canonical project note. Content above the horizontal rule is the durable manifest (tech stack, key paths, conventions); content below is session-tracked state (current state, what's next, open questions, learnings, recent sessions). **Do not skip this.** Working without context wastes time rediscovering things previous sessions already learned.
 
 ## Project Artifact Paths
 
-Write all plans, specs, and research to the life-lab vault — **not** to this repo:
-- Plans: `~/data/vaults/life-lab/Projects/{ProjectName}/plans/`
-- Specs: `~/data/vaults/life-lab/Projects/{ProjectName}/specs/`
-- Research: `~/data/vaults/life-lab/Projects/{ProjectName}/research/`
+Write all project content to the atlas vault under the mini-vault contract — **not** to this repo:
+- Epics: `~/vaults/atlas/Projects/{ProjectName}/epics/`
+- Tasks: `~/vaults/atlas/Projects/{ProjectName}/tasks/`
+- Notes (plans, specs, decisions, research, learnings, user-stories, brainstorms — differentiated by `source:` frontmatter): `~/vaults/atlas/Projects/{ProjectName}/notes/`
 
 ## Dev Log Frontmatter
 
@@ -68,14 +68,14 @@ When writing dev logs for this project, use this frontmatter:
 ```yaml
 ---
 type: log
-project: "[[{ProjectName}]]"
+projects: "[[{ProjectName}]]"
 date: YYYY-MM-DD
 ---
 ```
 
 ## MANDATORY: Dev-Log is Always Active
 
-**Subagent exclusion:** These devlog and context-loading instructions apply ONLY to the primary interactive session. If you were dispatched as a subagent with a specific task description (via the Agent tool), **skip all of this** — do not run `/devlog init`, do not run `/devlog write`, do not read or update `context.md`, do not update `partner_model.md`, do not write to the life-lab vault. Your job is implementation only. The controller session handles all logging and knowledge updates.
+**Subagent exclusion:** These devlog and context-loading instructions apply ONLY to the primary interactive session. If you were dispatched as a subagent with a specific task description (via the Agent tool), **skip all of this** — do not run `/devlog init`, do not run `/devlog write`, do not read or update `{ProjectName}.md`, do not update `partner_model.md`, do not write to the atlas vault. Your job is implementation only. The controller session handles all logging and knowledge updates.
 
 Dev-log is always on for the primary session. You do not need to be asked. Write a dev log (`/devlog write`) when **any** of these milestones occur:
 
@@ -99,15 +99,15 @@ Check if `.claude/settings.local.json` exists with the required permissions. If 
 {
   "permissions": {
     "allow": [
-      "Read(~/data/vaults/life-lab/Log/**)",
-      "Write(~/data/vaults/life-lab/Log/**)",
-      "Edit(~/data/vaults/life-lab/Log/**)",
-      "Read(~/data/vaults/life-lab/Projects/{ProjectName}/**)",
-      "Write(~/data/vaults/life-lab/Projects/{ProjectName}/**)",
-      "Edit(~/data/vaults/life-lab/Projects/{ProjectName}/**)",
-      "Read(~/data/vaults/life-lab/System/**)",
-      "Write(~/data/vaults/life-lab/System/logs/**)",
-      "Edit(~/data/vaults/life-lab/System/logs/**)"
+      "Read(~/vaults/atlas/Log/**)",
+      "Write(~/vaults/atlas/Log/**)",
+      "Edit(~/vaults/atlas/Log/**)",
+      "Read(~/vaults/atlas/Projects/{ProjectName}/**)",
+      "Write(~/vaults/atlas/Projects/{ProjectName}/**)",
+      "Edit(~/vaults/atlas/Projects/{ProjectName}/**)",
+      "Read(~/vaults/atlas/System/**)",
+      "Write(~/vaults/atlas/System/logs/**)",
+      "Edit(~/vaults/atlas/System/logs/**)"
     ]
   }
 }
@@ -115,7 +115,7 @@ Check if `.claude/settings.local.json` exists with the required permissions. If 
 
 If `vault_project: none`, only include the `Log/` permissions.
 
-If the file already exists with other permissions, **merge** — add the life-lab entries without removing existing ones.
+If the file already exists with other permissions, **merge** — add the atlas entries without removing existing ones.
 
 ### Step 4 — Ensure Gitignore
 
@@ -126,17 +126,18 @@ Check `.gitignore` for `CLAUDE.local.md` and `.claude/settings.local.json`. Add 
 If the project was already initialized (CLAUDE.local.md existed and was correct), output the following into context so the agent has it immediately:
 
 ```
-✓ life-lab project: {ProjectName}
-  Context: ~/data/vaults/life-lab/Projects/{ProjectName}/context.md
-  Plans:   ~/data/vaults/life-lab/Projects/{ProjectName}/plans/
-  Specs:   ~/data/vaults/life-lab/Projects/{ProjectName}/specs/
-  Research:~/data/vaults/life-lab/Projects/{ProjectName}/research/
-  Logs:    ~/data/vaults/life-lab/Log/
+✓ atlas project: {ProjectName}
+  Project note: ~/vaults/atlas/Projects/{ProjectName}/{ProjectName}.md
+  Epics:        ~/vaults/atlas/Projects/{ProjectName}/epics/
+  Tasks:        ~/vaults/atlas/Projects/{ProjectName}/tasks/
+  Notes:        ~/vaults/atlas/Projects/{ProjectName}/notes/
+  Task board:   ~/vaults/atlas/Projects/{ProjectName}/task-board.md
+  Logs:         ~/vaults/atlas/Log/
 
-Now read the context.md file to load project state.
+Now read the project note to load project state.
 ```
 
-Then **immediately read** `~/data/vaults/life-lab/Projects/{ProjectName}/context.md`.
+Then **immediately read** `~/vaults/atlas/Projects/{ProjectName}/{ProjectName}.md`.
 
 ---
 
@@ -178,7 +179,7 @@ Load same-day sessions if any exist (script outputs these under `SAME_DAY_SESSIO
 
 If continuing work on a specific issue, find related sessions:
 ```text
-Bash(command: "grep -rl 'ISSUE-ID' ~/data/vaults/life-lab/Log/ 2>/dev/null", description: "Find sessions for this issue")
+Bash(command: "grep -rl 'ISSUE-ID' ~/vaults/atlas/Log/ 2>/dev/null", description: "Find sessions for this issue")
 ```
 
 ### Step 3 — Read Template
@@ -204,12 +205,12 @@ Write to `SESSION_FILE_PATH`. Start with frontmatter:
 ```yaml
 ---
 type: log
-project: "[[PROJECT_NAME]]"
+projects: "[[PROJECT_NAME]]"
 date: FILE_DATE
 ---
 ```
 
-If `PROJECT_NAME` is `(none)`, use `project: "[[unlinked]]"` or derive from repo context.
+If `PROJECT_NAME` is `(none)`, use `projects: "[[unlinked]]"` or derive from repo context.
 
 Required sections every entry:
 
@@ -259,59 +260,28 @@ Conditional sections (add when relevant):
 
 Update these files based on what was learned this session. Take ownership — don't just suggest updates.
 
-**`~/data/vaults/life-lab/System/partner_model.md`** — update every session:
+**`~/vaults/atlas/System/partner_model.md`** — update every session:
 - New observations about collaboration patterns and preferences
 - Calibration notes from this session
 - Communication style discoveries
 
-**`PROJECT_CONTEXT_PATH`** (if not `(none)`) — update every session with that project:
-- If file doesn't exist, create it using the project context template (see below)
-- Current state (what was just built, what's merged, what's in-flight)
-- What's next (immediate next step)
-- Open questions (things that need decisions)
-- Recent activity (keep last 3 session summaries, linked to full logs)
-- Learnings (novel discoveries — library quirks, patterns that worked, debugging approaches)
-- Tech stack, key files, conventions, known issues (keep accurate)
+**`PROJECT_CONTEXT_PATH`** (points at `{ProjectName}.md`, if not `(none)`) — update every session with that project.
 
-**Project Context Template** (create on first session for a project):
-```markdown
-# Project: REPO-NAME
+**CRITICAL BOUNDARY:** The project note has a horizontal rule (`---`) separating two zones:
+- **Above the rule** — human-authored, durable manifest (tech stack, key paths, conventions, navigation). `/devlog write` MUST NOT modify this content.
+- **Below the rule** — agent-maintained session state. `/devlog write` updates only these sections:
+  - **Current State** — what was just built, what's merged, what's in-flight
+  - **What's Next** — immediate next step
+  - **Open Questions** — things that need decisions
+  - **Learnings** — novel discoveries (library quirks, patterns, debugging approaches)
+  - **Recent Sessions** — keep last 3 session summaries, linked to full logs
 
-## Tech Stack
-- **Language**: e.g. Rust, TypeScript
-- **Framework**: e.g. Next.js 14, Actix
-- **Testing**: e.g. Vitest, cargo test
-
-## Key Files
-- Entry point: `src/main.rs`
-- Config: `Cargo.toml`
-
-## Conventions
-- (naming, folder structure, patterns)
-
-## Known Issues
-- (active bugs, tech debt, gotchas)
-
-## Open Questions
-- (unresolved decisions)
-
-## Learnings
-- (novel discoveries from building this project)
-
-## Current State
-- (what was just built, what's in-flight)
-
-## What's Next
-- (immediate next step)
-
-## Recent Sessions
-- [DATE description](~/data/vaults/life-lab/Log/log-file.md) — one-line summary
-```
+If the project note does not yet exist, create it from `~/vaults/atlas/System/Templates/_project.md`. Fill the above-the-rule sections from the session's discoveries about the repo (tech stack, key paths, conventions) and seed below-the-rule sections from the current session.
 
 ### Step 7 — Commit
 
 ```text
-Bash(command: "git -C \"$HOME/data/vaults/life-lab\" add Log/ System/ Projects/ && git -C \"$HOME/data/vaults/life-lab\" commit -m 'vault(dev-log): [GIT_REPO] brief-description' && git -C \"$HOME/data/vaults/life-lab\" push", description: "Commit and push dev log and knowledge updates to life-lab vault")
+Bash(command: "git -C \"$HOME/vaults/atlas\" add Log/ System/ Projects/ && git -C \"$HOME/vaults/atlas\" commit -m 'vault(dev-log): [GIT_REPO] brief-description' && git -C \"$HOME/vaults/atlas\" push", description: "Commit and push dev log and knowledge updates to atlas vault")
 ```
 
 If nothing to commit (clean tree), skip silently.
@@ -326,4 +296,4 @@ If nothing to commit (clean tree), skip silently.
 - **Design Decisions section is gold** — "why X not Y" ages better than implementation details
 - **Mysteries section is honest** — documenting unknowns prevents future sessions from wasting time on dead ends
 - **One file per session** — never append to an existing log
-- **Learnings go in context.md too** — novel discoveries should be in both the log (detailed) and context.md (summarized) so future sessions get them without reading every log
+- **Learnings go in the project note too** — novel discoveries should be in both the log (detailed) and below-the-rule `## Learnings` in `{ProjectName}.md` (summarized) so future sessions get them without reading every log. Above-the-rule content is off-limits.
