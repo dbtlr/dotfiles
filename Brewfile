@@ -51,6 +51,7 @@ brew "worktrunk"
 brew "gemini-cli"
 brew "opencode"
 brew "agent-browser"
+brew "googleworkspace-cli"
 
 brew "docker"
 brew "docker-compose"
