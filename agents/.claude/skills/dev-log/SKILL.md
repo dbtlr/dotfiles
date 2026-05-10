@@ -1,81 +1,80 @@
 ---
 name: devlog
-description: "Two subcommands: 'init' bootstraps a project's atlas integration (context, permissions, gitignore) and loads project context every session. 'write' creates a comprehensive dev log entry and updates shared knowledge files. Run as /devlog init <name> or /devlog write."
+description: "Two subcommands: 'init' bootstraps a workspace's atlas integration (context, permissions, gitignore) and loads workspace context every session. 'write' creates a comprehensive dev log entry and updates shared knowledge files. Run as /devlog init <workspace-slug> or /devlog write."
 ---
 
 # Dev-Log Skill
 
 Two subcommands for atlas vault integration:
-- **`/devlog init <project name>`** — Bootstrap and load project context
+- **`/devlog init <workspace-slug>`** — Bootstrap and load workspace context
 - **`/devlog write`** — Write a session log and update knowledge files
 
 All artifacts live in the atlas vault at `~/vaults/atlas/`.
 
 ---
 
-## `/devlog init <project name>`
+## `/devlog init <workspace-slug>`
 
-**MANDATORY on every session start for bootstrapped projects.** This command is called from `CLAUDE.local.md` before any other work. It ensures the project is correctly wired to atlas and loads all project context into the session.
+**MANDATORY on every session start for bootstrapped workspaces.** This command is called from `CLAUDE.local.md` before any other work. It ensures the workspace is correctly wired to atlas and loads all workspace context into the session.
 
-### Step 1 — Resolve Project Name
+### Step 1 — Resolve Workspace Slug
 
-The `<project name>` argument is the atlas project name. Match it against `~/vaults/atlas/Projects/`:
+The `<workspace name>` argument is the atlas workspace slug. Match it against `~/vaults/atlas/Workspaces/`:
 
 1. **Exact match** → use it
 2. **Case-insensitive or substring match** → ask user: "Did you mean {X}?"
-3. **No match** → ask user: "Create new project '{name}' in atlas, or no project for this repo?"
-   - If creating new: `mkdir -p ~/vaults/atlas/Projects/{name}/{epics,tasks,notes}` and create `{name}.md` from the `_project.md` template (canonical entity note with above/below horizontal-rule split). Optionally seed an empty `task-board.md`.
-   - If no project: use `vault_project: none` — log-only mode
+3. **No match** → ask user: "Create new workspace '{name}' in atlas, or no workspace for this repo?"
+   - If creating new: `mkdir -p ~/vaults/atlas/Workspaces/{name}/{tasks,notes}` and create `{name}.md` from the `_workspace.md` template / workspace-structure standard.
+   - If no workspace: use `vault_workspace: none` — log-only mode
 
 ### Step 2 — Write/Repair CLAUDE.local.md
 
 Check if `CLAUDE.local.md` exists in the repo root with correct content. If missing or incomplete, write it. This is **self-healing** — it runs every time and repairs silently.
 
-Write the following content (replace `{ProjectName}` and `{ProjectPath}`):
+Write the following content (replace `{WorkspaceSlug}` and `{WorkspacePath}`):
 
 ```markdown
-# Project: {ProjectName}
+# Workspace: {WorkspaceSlug}
 
 ## MANDATORY: atlas Integration
 
-vault_project: {ProjectName}
+vault_workspace: {WorkspaceSlug}
 
 **Subagent exclusion:** If you were dispatched as a subagent (via the Agent tool) with a specific task, **skip all mandatory sections in this file.** Do not run `/devlog init`, do not load context, do not write devlogs, do not update the atlas vault. Focus only on your assigned task. The controller session handles all vault integration.
 
-**Before doing ANYTHING else in this session**, run: `/devlog init {ProjectName}`
+**Before doing ANYTHING else in this session**, run: `/devlog init {WorkspaceSlug}`
 
-This loads project context, ensures permissions, and prepares the session for logging.
+This loads workspace context, ensures permissions, and prepares the session for logging.
 
-## MANDATORY: Load Project Context
+## MANDATORY: Load Workspace Context
 
 After init completes, immediately read:
 ```
-~/vaults/atlas/Projects/{ProjectName}/{ProjectName}.md
+~/vaults/atlas/Workspaces/{WorkspaceSlug}/{WorkspaceSlug}.md
 ```
 
-This is the canonical project note. Content above the horizontal rule is the durable manifest (tech stack, key paths, conventions); content below is session-tracked state (current state, what's next, open questions, learnings, recent sessions). **Do not skip this.** Working without context wastes time rediscovering things previous sessions already learned.
+This is the canonical workspace note. Content above the horizontal rule is the durable manifest (tech stack, key paths, conventions); content below is session-tracked state (current state, what's next, open questions, learnings, recent sessions). **Do not skip this.** Working without context wastes time rediscovering things previous sessions already learned.
 
-## Project Artifact Paths
+## Workspace Artifact Paths
 
-Write all project content to the atlas vault under the mini-vault contract — **not** to this repo:
-- Epics: `~/vaults/atlas/Projects/{ProjectName}/epics/`
-- Tasks: `~/vaults/atlas/Projects/{ProjectName}/tasks/`
-- Notes (plans, specs, decisions, research, learnings, user-stories, brainstorms — differentiated by `source:` frontmatter): `~/vaults/atlas/Projects/{ProjectName}/notes/`
+Write all workspace content to the atlas vault under the mini-vault contract — **not** to this repo:
+- Tasks: `~/vaults/atlas/Workspaces/{WorkspaceSlug}/tasks/`
+- Notes (plans, specs, decisions, research, learnings, user-stories, brainstorms — differentiated by `kind:` frontmatter): `~/vaults/atlas/Workspaces/{WorkspaceSlug}/notes/`
 
 ## Dev Log Frontmatter
 
-When writing dev logs for this project, use this frontmatter:
+When writing dev logs for this workspace, use this frontmatter:
 ```yaml
 ---
 type: log
-projects: "[[{ProjectName}]]"
+workspace: "[[{WorkspaceSlug}]]"
 date: YYYY-MM-DD
 ---
 ```
 
 ## MANDATORY: Dev-Log is Always Active
 
-**Subagent exclusion:** These devlog and context-loading instructions apply ONLY to the primary interactive session. If you were dispatched as a subagent with a specific task description (via the Agent tool), **skip all of this** — do not run `/devlog init`, do not run `/devlog write`, do not read or update `{ProjectName}.md`, do not update `partner_model.md`, do not write to the atlas vault. Your job is implementation only. The controller session handles all logging and knowledge updates.
+**Subagent exclusion:** These devlog and context-loading instructions apply ONLY to the primary interactive session. If you were dispatched as a subagent with a specific task description (via the Agent tool), **skip all of this** — do not run `/devlog init`, do not run `/devlog write`, do not read or update `{WorkspaceSlug}.md`, do not update `partner_model.md`, do not write to the atlas vault. Your job is implementation only. The controller session handles all logging and knowledge updates.
 
 Dev-log is always on for the primary session. You do not need to be asked. Write a dev log (`/devlog write`) when **any** of these milestones occur:
 
@@ -88,7 +87,7 @@ Dev-log is always on for the primary session. You do not need to be asked. Write
 **Do not ask permission.** Do not wait for a prompt. When a milestone hits, run `/devlog write`.
 ```
 
-If `vault_project: none`, omit the project context loading, artifact paths, and frontmatter sections — keep only the dev-log trigger conditions with log-only instructions.
+If `vault_workspace: none`, omit the workspace context loading, artifact paths, and frontmatter sections — keep only the dev-log trigger conditions with log-only instructions.
 
 ### Step 3 — Write/Repair .claude/settings.local.json
 
@@ -102,9 +101,9 @@ Check if `.claude/settings.local.json` exists with the required permissions. If 
       "Read(~/vaults/atlas/Log/**)",
       "Write(~/vaults/atlas/Log/**)",
       "Edit(~/vaults/atlas/Log/**)",
-      "Read(~/vaults/atlas/Projects/{ProjectName}/**)",
-      "Write(~/vaults/atlas/Projects/{ProjectName}/**)",
-      "Edit(~/vaults/atlas/Projects/{ProjectName}/**)",
+      "Read(~/vaults/atlas/Workspaces/{WorkspaceSlug}/**)",
+      "Write(~/vaults/atlas/Workspaces/{WorkspaceSlug}/**)",
+      "Edit(~/vaults/atlas/Workspaces/{WorkspaceSlug}/**)",
       "Read(~/vaults/atlas/System/**)",
       "Write(~/vaults/atlas/System/logs/**)",
       "Edit(~/vaults/atlas/System/logs/**)"
@@ -113,7 +112,7 @@ Check if `.claude/settings.local.json` exists with the required permissions. If 
 }
 ```
 
-If `vault_project: none`, only include the `Log/` permissions.
+If `vault_workspace: none`, only include the `Log/` permissions.
 
 If the file already exists with other permissions, **merge** — add the atlas entries without removing existing ones.
 
@@ -123,21 +122,20 @@ Check `.gitignore` for `CLAUDE.local.md` and `.claude/settings.local.json`. Add 
 
 ### Step 5 — Load Context (Already Initialized)
 
-If the project was already initialized (CLAUDE.local.md existed and was correct), output the following into context so the agent has it immediately:
+If the workspace was already initialized (CLAUDE.local.md existed and was correct), output the following into context so the agent has it immediately:
 
 ```
-✓ atlas project: {ProjectName}
-  Project note: ~/vaults/atlas/Projects/{ProjectName}/{ProjectName}.md
-  Epics:        ~/vaults/atlas/Projects/{ProjectName}/epics/
-  Tasks:        ~/vaults/atlas/Projects/{ProjectName}/tasks/
-  Notes:        ~/vaults/atlas/Projects/{ProjectName}/notes/
-  Task board:   ~/vaults/atlas/Projects/{ProjectName}/task-board.md
+✓ atlas workspace: {WorkspaceSlug}
+  Workspace note: ~/vaults/atlas/Workspaces/{WorkspaceSlug}/{WorkspaceSlug}.md
+  Tasks:          ~/vaults/atlas/Workspaces/{WorkspaceSlug}/tasks/
+  Notes:          ~/vaults/atlas/Workspaces/{WorkspaceSlug}/notes/
+  Task board:     ~/vaults/atlas/task-board.base
   Logs:         ~/vaults/atlas/Log/
 
-Now read the project note to load project state.
+Now read the workspace note to load workspace state.
 ```
 
-Then **immediately read** `~/vaults/atlas/Projects/{ProjectName}/{ProjectName}.md`.
+Then **immediately read** `~/vaults/atlas/Workspaces/{WorkspaceSlug}/{WorkspaceSlug}.md`.
 
 ---
 
@@ -158,8 +156,8 @@ Capture from output:
 - `FILE_DATE`, `FILE_TIME` — for filename construction
 - `GIT_REPO`, `GIT_BRANCH` — repo context
 - `ISSUE_HINT` — issue IDs from branch name
-- `PROJECT_NAME` — from CLAUDE.local.md (may be `(none)`)
-- `PROJECT_CONTEXT_PATH` — path to context.md (may be `(none)`)
+- `WORKSPACE_NAME` — from CLAUDE.local.md (may be `(none)`)
+- `WORKSPACE_CONTEXT_PATH` — path to workspace root note (may be `(none)`)
 - `LOG_DIR` — where to write the log
 - `PREVIOUS_SESSION_PATH` — most recent prior log
 
@@ -205,12 +203,12 @@ Write to `SESSION_FILE_PATH`. Start with frontmatter:
 ```yaml
 ---
 type: log
-projects: "[[PROJECT_NAME]]"
+workspace: "[[WORKSPACE_NAME]]"
 date: FILE_DATE
 ---
 ```
 
-If `PROJECT_NAME` is `(none)`, use `projects: "[[unlinked]]"` or derive from repo context.
+If `WORKSPACE_NAME` is `(none)`, omit `workspace:` or derive a workspace slug from repo context only when obvious.
 
 Required sections every entry:
 
@@ -265,9 +263,9 @@ Update these files based on what was learned this session. Take ownership — do
 - Calibration notes from this session
 - Communication style discoveries
 
-**`PROJECT_CONTEXT_PATH`** (points at `{ProjectName}.md`, if not `(none)`) — update every session with that project.
+**`WORKSPACE_CONTEXT_PATH`** (points at `{WorkspaceSlug}.md`, if not `(none)`) — update every session with that workspace.
 
-**CRITICAL BOUNDARY:** The project note has a horizontal rule (`---`) separating two zones:
+**CRITICAL BOUNDARY:** The workspace note has a horizontal rule (`---`) separating two zones:
 - **Above the rule** — human-authored, durable manifest (tech stack, key paths, conventions, navigation). `/devlog write` MUST NOT modify this content.
 - **Below the rule** — agent-maintained session state. `/devlog write` updates only these sections:
   - **Current State** — what was just built, what's merged, what's in-flight
@@ -276,12 +274,12 @@ Update these files based on what was learned this session. Take ownership — do
   - **Learnings** — novel discoveries (library quirks, patterns, debugging approaches)
   - **Recent Sessions** — keep last 3 session summaries, linked to full logs
 
-If the project note does not yet exist, create it from `~/vaults/atlas/System/Templates/_project.md`. Fill the above-the-rule sections from the session's discoveries about the repo (tech stack, key paths, conventions) and seed below-the-rule sections from the current session.
+If the workspace note does not yet exist, create it from `~/vaults/atlas/System/Templates/_workspace.md` and `~/vaults/atlas/System/Standards/workspace-structure.md`. Fill the above-the-rule sections from the session's discoveries about the repo (tech stack, key paths, conventions) and seed below-the-rule sections from the current session.
 
 ### Step 7 — Commit
 
 ```text
-Bash(command: "git -C \"$HOME/vaults/atlas\" add Log/ System/ Projects/ && git -C \"$HOME/vaults/atlas\" commit -m 'vault(dev-log): [GIT_REPO] brief-description' && git -C \"$HOME/vaults/atlas\" push", description: "Commit and push dev log and knowledge updates to atlas vault")
+Bash(command: "git -C \"$HOME/vaults/atlas\" add Log/ System/ Workspaces/ && git -C \"$HOME/vaults/atlas\" commit -m 'vault(dev-log): [GIT_REPO] brief-description' && git -C \"$HOME/vaults/atlas\" push", description: "Commit and push dev log and knowledge updates to atlas vault")
 ```
 
 If nothing to commit (clean tree), skip silently.
@@ -296,4 +294,4 @@ If nothing to commit (clean tree), skip silently.
 - **Design Decisions section is gold** — "why X not Y" ages better than implementation details
 - **Mysteries section is honest** — documenting unknowns prevents future sessions from wasting time on dead ends
 - **One file per session** — never append to an existing log
-- **Learnings go in the project note too** — novel discoveries should be in both the log (detailed) and below-the-rule `## Learnings` in `{ProjectName}.md` (summarized) so future sessions get them without reading every log. Above-the-rule content is off-limits.
+- **Learnings go in the workspace note too** — novel discoveries should be in both the log (detailed) and below-the-rule `## Learnings` in `{WorkspaceSlug}.md` (summarized) so future sessions get them without reading every log. Above-the-rule content is off-limits.

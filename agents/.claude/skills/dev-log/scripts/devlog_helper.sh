@@ -24,19 +24,24 @@ echo "GIT_REPO: $GIT_REPO"
 echo "GIT_BRANCH: $GIT_BRANCH"
 echo "GIT_DIFF_STAT: $GIT_DIFF_STAT"
 
-# 4. Project name from CLAUDE.local.md
-PROJECT_NAME=""
+# 4. Workspace slug from CLAUDE.local.md
+WORKSPACE_NAME=""
 if [ -n "$GIT_ROOT" ] && [ -f "$GIT_ROOT/CLAUDE.local.md" ]; then
-  PROJECT_NAME=$(grep -m1 '^vault_project:' "$GIT_ROOT/CLAUDE.local.md" 2>/dev/null | sed 's/^vault_project: *//' | xargs)
+  WORKSPACE_NAME=$(grep -m1 '^vault_workspace:' "$GIT_ROOT/CLAUDE.local.md" 2>/dev/null | sed 's/^vault_workspace: *//' | xargs)
+
+  # Backward compatibility for older local files. Prefer vault_workspace.
+  if [ -z "$WORKSPACE_NAME" ]; then
+    WORKSPACE_NAME=$(grep -m1 '^vault_project:' "$GIT_ROOT/CLAUDE.local.md" 2>/dev/null | sed 's/^vault_project: *//' | xargs)
+  fi
 fi
 
-if [ -n "$PROJECT_NAME" ] && [ "$PROJECT_NAME" != "none" ]; then
-  PROJECT_CONTEXT_PATH="$HOME/vaults/atlas/Projects/$PROJECT_NAME/$PROJECT_NAME.md"
-  echo "PROJECT_NAME: $PROJECT_NAME"
-  echo "PROJECT_CONTEXT_PATH: $PROJECT_CONTEXT_PATH"
+if [ -n "$WORKSPACE_NAME" ] && [ "$WORKSPACE_NAME" != "none" ]; then
+  WORKSPACE_CONTEXT_PATH="$HOME/vaults/atlas/Workspaces/$WORKSPACE_NAME/$WORKSPACE_NAME.md"
+  echo "WORKSPACE_NAME: $WORKSPACE_NAME"
+  echo "WORKSPACE_CONTEXT_PATH: $WORKSPACE_CONTEXT_PATH"
 else
-  echo "PROJECT_NAME: (none)"
-  echo "PROJECT_CONTEXT_PATH: (none)"
+  echo "WORKSPACE_NAME: (none)"
+  echo "WORKSPACE_CONTEXT_PATH: (none)"
 fi
 
 # 5. Log directory (flat)
