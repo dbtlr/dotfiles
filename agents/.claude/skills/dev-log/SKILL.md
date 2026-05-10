@@ -24,10 +24,21 @@ The `<workspace name>` argument is the atlas workspace slug. Match it against `~
 1. **Exact match** → use it
 2. **Case-insensitive or substring match** → ask user: "Did you mean {X}?"
 3. **No match** → ask user: "Create new workspace '{name}' in atlas, or no workspace for this repo?"
-   - If creating new: `mkdir -p ~/vaults/atlas/Workspaces/{name}/{tasks,notes}` and create `{name}.md` from the `_workspace.md` template / workspace-structure standard.
+   - If creating new: `mkdir -p ~/vaults/atlas/Workspaces/{name}/{tasks,notes,agent-artifacts}` and create `{name}.md` from the `_workspace.md` template / workspace-structure standard.
    - If no workspace: use `vault_workspace: none` — log-only mode
 
-### Step 2 — Write/Repair CLAUDE.local.md
+### Step 2 — Ensure Workspace Directories
+
+For a resolved workspace, ensure the mini-vault directories exist:
+```text
+~/vaults/atlas/Workspaces/{WorkspaceSlug}/tasks/
+~/vaults/atlas/Workspaces/{WorkspaceSlug}/notes/
+~/vaults/atlas/Workspaces/{WorkspaceSlug}/agent-artifacts/
+```
+
+Create missing directories silently. Do not move existing files during init.
+
+### Step 3 — Write/Repair CLAUDE.local.md
 
 Check if `CLAUDE.local.md` exists in the repo root with correct content. If missing or incomplete, write it. This is **self-healing** — it runs every time and repairs silently.
 
@@ -59,7 +70,27 @@ This is the canonical workspace note. Content above the horizontal rule is the d
 
 Write all workspace content to the atlas vault under the mini-vault contract — **not** to this repo:
 - Tasks: `~/vaults/atlas/Workspaces/{WorkspaceSlug}/tasks/`
-- Notes (plans, specs, decisions, research, learnings, user-stories, brainstorms — differentiated by `kind:` frontmatter): `~/vaults/atlas/Workspaces/{WorkspaceSlug}/notes/`
+- Notes (canonical workspace knowledge: human-authored/summarized plans, specs, decisions, research, learnings, user-stories, brainstorms — differentiated by `kind:` frontmatter): `~/vaults/atlas/Workspaces/{WorkspaceSlug}/notes/`
+- Agent artifacts (generated execution reference from Claude Code/Superpowers or other coding agents): `~/vaults/atlas/Workspaces/{WorkspaceSlug}/agent-artifacts/`
+
+Generated coding-agent plans/specs/reviews/log-like run artifacts are **not** canonical notes. Route them to `agent-artifacts/` with `type: agent-artifact`. Only write to `notes/` when durable knowledge has been explicitly rewritten or summarized as a normal `type: note`.
+
+## Agent Artifact Frontmatter
+
+When writing generated plans/specs/reviews into `agent-artifacts/`, use minimal frontmatter:
+```yaml
+---
+type: agent-artifact
+artifact_kind: plan # plan | spec | review | log | summary
+source: claude-code-superpowers
+created: YYYY-MM-DDTHH:mm
+modified: YYYY-MM-DDTHH:mm
+workspace: "[[{WorkspaceSlug}]]"
+related_task: "[[task-note-name]]" # optional; omit or leave blank if not obvious
+---
+```
+
+Do not add `kind:` to agent artifacts; `kind:` is reserved for `type: note`. Fill `related_task` only when the current work clearly maps to an Atlas task.
 
 ## Dev Log Frontmatter
 
@@ -89,7 +120,7 @@ Dev-log is always on for the primary session. You do not need to be asked. Write
 
 If `vault_workspace: none`, omit the workspace context loading, artifact paths, and frontmatter sections — keep only the dev-log trigger conditions with log-only instructions.
 
-### Step 3 — Write/Repair .claude/settings.local.json
+### Step 4 — Write/Repair .claude/settings.local.json
 
 Check if `.claude/settings.local.json` exists with the required permissions. If missing or incomplete, write/merge them.
 
@@ -116,11 +147,11 @@ If `vault_workspace: none`, only include the `Log/` permissions.
 
 If the file already exists with other permissions, **merge** — add the atlas entries without removing existing ones.
 
-### Step 4 — Ensure Gitignore
+### Step 5 — Ensure Gitignore
 
 Check `.gitignore` for `CLAUDE.local.md` and `.claude/settings.local.json`. Add them if missing. Do not duplicate existing entries.
 
-### Step 5 — Load Context (Already Initialized)
+### Step 6 — Load Context (Already Initialized)
 
 If the workspace was already initialized (CLAUDE.local.md existed and was correct), output the following into context so the agent has it immediately:
 
@@ -129,6 +160,7 @@ If the workspace was already initialized (CLAUDE.local.md existed and was correc
   Workspace note: ~/vaults/atlas/Workspaces/{WorkspaceSlug}/{WorkspaceSlug}.md
   Tasks:          ~/vaults/atlas/Workspaces/{WorkspaceSlug}/tasks/
   Notes:          ~/vaults/atlas/Workspaces/{WorkspaceSlug}/notes/
+  Agent artifacts: ~/vaults/atlas/Workspaces/{WorkspaceSlug}/agent-artifacts/
   Task board:     ~/vaults/atlas/task-board.base
   Logs:         ~/vaults/atlas/Log/
 
