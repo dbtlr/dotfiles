@@ -22,11 +22,13 @@ The user provides what they learned, usually inline:
 
 Take their words as-is. Don't rewrite or reformat their phrasing.
 
-### Step 2: Detect Project Context
+### Step 2: Detect Workspace Context
 
 ```bash
 basename "$(git rev-parse --show-toplevel 2>/dev/null)" || echo "unknown"
 ```
+
+Use this as the Atlas workspace relationship when obvious. Normalize to the workspace slug (for example `tyr`, `skald`, `vault-memory`, `vault-plugin`, `norn`). If no workspace is clear, omit `workspace:` rather than inventing one.
 
 ### Step 3: Optional Enrichment
 
@@ -55,7 +57,7 @@ type: note
 created: YYYY-MM-DDTHH:mm
 modified: YYYY-MM-DDTHH:mm
 domain: Technology
-projects: [detected project name]
+workspace: "[[detected-workspace-slug]]"
 source: conversation
 ---
 

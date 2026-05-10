@@ -22,15 +22,15 @@ The user describes what to capture. Examples:
 
 Parse the topic from the user's message. If unclear, ask.
 
-### Step 2: Detect Project Context
+### Step 2: Detect Workspace Context
 
-Determine which project this knowledge came from:
+Determine which Atlas workspace this knowledge came from:
 
 ```bash
 basename "$(git rev-parse --show-toplevel 2>/dev/null)" || echo "unknown"
 ```
 
-This becomes the `project` field in frontmatter.
+This becomes the `workspace` relationship field in frontmatter. Normalize to the Atlas workspace slug when obvious (for example `tyr`, `skald`, `vault-memory`, `vault-plugin`, `norn`).
 
 ### Step 3: Synthesize from Session Context
 
@@ -40,7 +40,7 @@ Review the current session — what was done, what was learned, what worked, wha
 - **Why** — what problem it solves, when to use it
 - **How** — concrete steps, commands, configuration
 - **Gotchas** — things that tripped us up, edge cases discovered
-- **Context** — what project this came from, what prompted the discovery
+- **Context** — what workspace this came from, what prompted the discovery
 
 The note should be **self-contained and reusable**. Someone reading it in 6 months (or working on a different project) should be able to follow it without the original session context.
 
@@ -56,14 +56,14 @@ type: note
 created: YYYY-MM-DDTHH:mm
 modified: YYYY-MM-DDTHH:mm
 domain: Technology
-projects: [detected project name]
+workspace: "[[detected-workspace-slug]]"
 source: research
 ---
 ```
 
 Use the current timestamp (ISO 8601 with minute precision) for both `created:` and `modified:`. Get it via `date +%Y-%m-%dT%H:%M` — both fields take the same value at creation time.
 
-Follow the frontmatter with the synthesized content. Use `[[wikilinks]]` for concepts that likely connect to existing vault content (project names, tools, technologies).
+Follow the frontmatter with the synthesized content. Use `[[wikilinks]]` for concepts that likely connect to existing vault content (workspace names, tools, technologies).
 
 ### Step 5: Confirm
 
@@ -76,7 +76,7 @@ Brief summary of what was included (2-3 bullet points) so the user can verify it
 - **Synthesize, don't transcribe.** The value is in the agent's synthesis — extracting the reusable pattern from the specific session context. Don't just dump raw conversation.
 - **Be comprehensive but focused.** Cover the topic thoroughly, but don't include unrelated session work.
 - **Include concrete details.** Commands, config snippets, file paths — the things you'd need to replicate this.
-- **Link to the project.** The frontmatter connects this knowledge to its origin project, making it findable later.
+- **Link to the workspace.** The frontmatter connects this knowledge to its origin workspace, making it findable later. Use `workspace: "[[slug]]"`; if no workspace is clear, omit the field rather than inventing one.
 - **Default domain to Development** for coding sessions (patterns, pipelines, frameworks). Use Technology for infrastructure/tooling topics. The user can specify otherwise.
 - **No git operations.** Just write the file. atlas's `/inbox` skill handles git when it processes the inbox later.
 - **Don't ask unnecessary questions.** The user said what to capture — do it. Only ask if the topic is genuinely ambiguous.
