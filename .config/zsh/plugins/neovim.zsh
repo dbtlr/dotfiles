@@ -6,12 +6,6 @@ alias svim='sudo -E nvim'
 alias vd='nvim .'
 alias vl='nvim -c "normal! `0"'
 
-vp() {
-  local root
-  root=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
-  nvim "$root"
-}
-
 vf() {
   local file
   file=$(fzf --height 40% --reverse) || return
