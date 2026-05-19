@@ -76,18 +76,7 @@ update_npm_packages() {
 }
 
 update_node() {
-  current_node=$(fnm current)
-  latest_node=$(fnm list-remote --latest --lts)
 
-  if [[ "$current_node" != "$latest_node" ]]; then
-    print_info "Updating Node from $current_node to $latest_node"
-    fnm install --lts >/dev/null 2>&1 && \
-    fnm default lts
-  else
-    print_info "Nothing to do, $latest_node is already the latest..."
-  fi
-
-  echo ""
 }
 
 update_brew() {

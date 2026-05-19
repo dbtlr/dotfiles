@@ -31,14 +31,6 @@ brew "dust"
 brew "btop"
 brew "starship"
 
-# Node
-brew "fnm"
-brew "bun"
-
-# Python
-brew "python3"
-brew "uv"
-
 # Dev tools
 brew "mosh"
 brew "tmux"
@@ -62,7 +54,6 @@ cask "font-fira-code-nerd-font"
 cask "font-hack-nerd-font"
 
 cask "raycast"
-cask "visual-studio-code"
 cask "ghostty"
 cask "cmux"
 cask "gcloud-cli"

@@ -25,11 +25,13 @@ To install dependencies only (no dotfiles stowed):
 ### Manual Install
 
 1. Install GNU Stow:
+
    ```bash
    sudo apt install stow   # or: brew install stow
    ```
 
 2. Clone and stow:
+
    ```bash
    git clone https://github.com/USERNAME/dotfiles.git ~/dotfiles
    cd ~/dotfiles
@@ -69,5 +71,4 @@ Other dependencies:
 
 - [Oh My Zsh](https://ohmyz.sh/)
 - [Powerlevel10k](https://github.com/romkatv/powerlevel10k)
-- [fnm](https://github.com/Schniz/fnm) (Node version manager)
 - [Neovim](https://neovim.io/) (0.9+)
