@@ -2,7 +2,7 @@ if command -v mise &> /dev/null; then
   eval "$(/Users/${USER}/.local/bin/mise activate zsh)"
 fi
 
-mise_update() {
+update_mise() {
   print_header "Updating Mise"
   if command -v mise &> /dev/null; then
     local output
