@@ -8,3 +8,5 @@ uv = "latest"
 rust = "latest"
 just = "latest"
 
+claude = "latest"
+codex = "latest"

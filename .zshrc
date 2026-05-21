@@ -35,6 +35,9 @@ esac
 
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 
+
+[ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
+
 # bun completions
 [ -s "/Users/${USER}/.bun/_bun" ] && source "/Users/${USER}/.bun/_bun"
 

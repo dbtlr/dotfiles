@@ -1,50 +1,3 @@
-npm_latest_version() {
-  npm view $1 version
-}
-
-npm_current_installed_version() {
-  npm ls --depth 0 -g $1 | grep $1 | awk -F@ '{print $NF}'
-}
-
-npm_package_installed() {
-  npm ls --depth 0 -g $1 | grep $1 >/dev/null 2>&1
-}
-
-npm_install_latest_version() {
-  local pkg_name="$1"
-
-  local installed_version=$(npm_current_installed_version $pkg_name)
-  local latest_version=$(npm_latest_version $pkg_name)
-
-  if [ -z "$latest_version" ]; then
-    print_error "Could not find a latest version of $pkg_name"
-    return 1
-  fi
-
-  if [ -z "$installed_version" ]; then
-    npm install -g $pkg_name@latest >/dev/null 2>&1 && {
-      print_success "Installed $pkg_name@$latest_version"
-      return 0
-    } || {
-      print_error "Failed to install $pkg_name"
-      return 1
-    }
-  fi
-
-  if [[ "$installed_version" != "$latest_version" ]]; then
-    npm install -g $pkg_name@latest >/dev/null 2>&1 && {
-      print_success "Updated $pkg_name from $installed_version to $latest_version"
-      return 0
-    } || {
-      print_error "Failed to update $pkg_name to $latest_version"
-      return 1
-    }
-  else
-    print_skip "$pkg_name already at latest"
-    return 0
-  fi
-}
-
 debounce() {
   debounce_filename=$1
   debounce_text=$2
@@ -61,22 +14,6 @@ debounce() {
   else
     return 1
   fi
-}
-
-update_npm_packages() {
-  print_header "Updating NPM Packages"
-
-  local packages=("typescript" "typescript-language-server" "serve" "pnpm")
-
-  for package in "${packages[@]}"; do
-    npm_install_latest_version $package
-  done
-
-  echo ""
-}
-
-update_node() {
-
 }
 
 update_brew() {

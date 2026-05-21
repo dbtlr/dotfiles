@@ -11,8 +11,7 @@ good_morning() {
     echo ""
 
     update_brew
-    update_npm_packages
-    claude update
+    update_mise
 
     echo $today > $good_morning_filename
     printf "\n"
