@@ -7,7 +7,7 @@ export BUN_INSTALL_CACHE_DIR="/home/data/.cache/bun"
 
 # Oh My Zsh
 export ZSH="$HOME/.oh-my-zsh"
-plugins=(kubectl npm python uv bun bundler git)
+plugins=(kubectl npm python bun bundler git)
 source $ZSH/oh-my-zsh.sh
 
 # Load modular configs
