@@ -40,8 +40,6 @@ esac
 # bun completions
 [ -s "/Users/drew/.bun/_bun" ] && source "/Users/drew/.bun/_bun"
 
-eval "$(/Users/drew/.local/bin/mise activate zsh)" # added by https://mise.run/zsh
-
 # >>> vault completions (added by 'vault completions install' on 2026-05-18) >>>
 eval "$(vault completions init zsh)"
 # <<< vault completions <<<

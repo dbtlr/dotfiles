@@ -84,6 +84,10 @@ install_dots() {
     fi
   }
 
+  if ! command mise &> /dev/null; then
+    curl https://mise.run | sh
+  fi
+
   # Install Oh My Zsh if missing
   if [[ ! -d "$HOME/.oh-my-zsh" ]]; then
     print_header "Installing Oh My Zsh..."
