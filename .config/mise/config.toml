@@ -1,0 +1,10 @@
+[tools]
+bun = "latest"
+node = "24"
+pnpm = "11"
+vp = "latest"
+uv = "latest"
+
+rust = "latest"
+just = "latest"
+
