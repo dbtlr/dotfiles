@@ -1,5 +1,5 @@
 if command -v mise &> /dev/null; then
-  eval "$(/Users/drew/.local/bin/mise activate zsh)"
+  eval "$(/Users/${USER}/.local/bin/mise activate zsh)"
 fi
 
 mise_update() {

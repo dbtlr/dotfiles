@@ -26,7 +26,7 @@ good_morning
 eval "$(starship init zsh)"
 
 # pnpm
-export PNPM_HOME="/Users/drew/Library/pnpm"
+export PNPM_HOME="/Users/${USER}/Library/pnpm"
 case ":$PATH:" in
   *":$PNPM_HOME/bin:"*) ;;
   *) export PATH="$PNPM_HOME/bin:$PATH" ;;
@@ -35,11 +35,9 @@ esac
 
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 
-. "$HOME/.cargo/env"
-
 # bun completions
-[ -s "/Users/drew/.bun/_bun" ] && source "/Users/drew/.bun/_bun"
+[ -s "/Users/${USER}/.bun/_bun" ] && source "/Users/${USER}/.bun/_bun"
 
 # >>> vault completions (added by 'vault completions install' on 2026-05-18) >>>
-eval "$(vault completions init zsh)"
+command -v vault &> /dev/null 2>&1 && eval "$(vault completions init zsh)" || true
 # <<< vault completions <<<
