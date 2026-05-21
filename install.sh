@@ -38,17 +38,6 @@ install_deps() {
   print_header "Installing packages via Brewfile..."
   brew bundle --file="$DOTFILES/Brewfile"
 
-  # pnpm
-  if ! command_exists pnpm; then
-    if command_exists npm; then
-      npm install -g pnpm && print_success "pnpm installed" || print_error "Failed to install pnpm"
-    else
-      print_error "pnpm requires npm — install Node first"
-    fi
-  else
-    print_skip "pnpm"
-  fi
-
   echo ""
   echo "========================================"
   echo "         Dependencies Installed!"
@@ -84,10 +73,6 @@ install_dots() {
     fi
   }
 
-  if ! command mise &> /dev/null; then
-    curl https://mise.run | sh
-  fi
-
   # Install Oh My Zsh if missing
   if [[ ! -d "$HOME/.oh-my-zsh" ]]; then
     print_header "Installing Oh My Zsh..."
@@ -102,7 +87,7 @@ install_dots() {
   # fi
 
   # Ensure zsh is the default shell
-  current_shell="$(getent passwd "$USER" | cut -d: -f7 2>/dev/null || echo "$SHELL")"
+  current_shell="$(echo "$SHELL")"
   zsh_path="$(command -v zsh || true)"
   if [[ -z "$zsh_path" ]]; then
     echo "==> zsh not found; skipping default shell change"
@@ -132,6 +117,14 @@ install_dots() {
   print_header "Stowing dotfiles..."
   stow --no-folding -t ~             .          # main dotfiles
   stow --no-folding -t ~ -d "$DOTFILES" agents  # claude config
+
+  if ! command -v mise &> /dev/null; then
+    curl https://mise.run | sh
+    mise install
+  else
+    mise self-update -y
+    mise upgrade
+  fi
 
   print_success "Done! Restart your shell or run: source ~/.zshrc"
 }
