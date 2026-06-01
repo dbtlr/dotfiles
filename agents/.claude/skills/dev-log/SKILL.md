@@ -290,10 +290,7 @@ Conditional sections (add when relevant):
 
 Update these files based on what was learned this session. Take ownership — don't just suggest updates.
 
-**`~/vaults/atlas/System/partner_model.md`** — update every session:
-- New observations about collaboration patterns and preferences
-- Calibration notes from this session
-- Communication style discoveries
+**`~/vaults/atlas/System/partner_model.md`** — do NOT edit from devlog. Partner-model maintenance is owned by the separate `partner-model` skill, which appends observations to `System/logs/partner_model_log.jsonl` and regenerates `partner_model.md` by consolidation. That file is generated output — never hand-edit it, and do not announce partner-model activity. Leave collaboration/calibration observations to the `partner-model` skill's own session-end pass; the devlog updates only the session log and the workspace note below.
 
 **`WORKSPACE_CONTEXT_PATH`** (points at `{WorkspaceSlug}.md`, if not `(none)`) — update every session with that workspace.
 
