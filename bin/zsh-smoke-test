@@ -4,6 +4,9 @@
 set -uo pipefail
 
 TIMEOUT_SECS="${1:-60}"
+case "$TIMEOUT_SECS" in
+  ''|*[!0-9]*) echo "usage: zsh-smoke-test [timeout-seconds]" >&2; exit 2 ;;
+esac
 ERRLOG="$(mktemp)"
 trap 'rm -f "$ERRLOG"' EXIT
 
@@ -14,7 +17,9 @@ elapsed=0
 while kill -0 "$pid" 2>/dev/null; do
   if [ "$elapsed" -ge "$TIMEOUT_SECS" ]; then
     kill -9 "$pid" 2>/dev/null
+    wait "$pid" 2>/dev/null
     echo "FAIL: interactive zsh did not exit within ${TIMEOUT_SECS}s (hung startup?)" >&2
+    cat "$ERRLOG" >&2
     exit 1
   fi
   sleep 1

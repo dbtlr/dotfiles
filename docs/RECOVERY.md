@@ -23,7 +23,6 @@ Every host keeps a dereferenced copy of the last known-good zshrc at
 To recover with it:
 
     zsh -f
-    cp ~/.zshrc.fallback ~/.zshrc.recovered
     ZDOTDIR=$(mktemp -d); cp ~/.zshrc.fallback "$ZDOTDIR/.zshrc"; ZDOTDIR=$ZDOTDIR zsh -i
 
 Note: `~/.zshrc` is normally a stow symlink into `~/dotfiles`. Prefer fixing
