@@ -1,0 +1,17 @@
+// Managed by dotfiles (manifests/50unattended-upgrades).
+// Installed by `dotfiles install` as
+// /etc/apt/apt.conf.d/50unattended-upgrades-dotfiles — suffixed so the
+// distro's stock 50unattended-upgrades stays intact; this file sorts after
+// it and takes precedence.
+//
+// Security-only: no feature updates land unattended. #clear wipes whatever
+// origins the distro default enabled, then we allow exactly one.
+#clear Unattended-Upgrade::Allowed-Origins;
+Unattended-Upgrade::Allowed-Origins {
+	"${distro_id}:${distro_codename}-security";
+};
+
+// Periodic switches (also written to 20auto-upgrades by install — duplicated
+// here so this file alone is sufficient to turn the machinery on).
+APT::Periodic::Update-Package-Lists "1";
+APT::Periodic::Unattended-Upgrade "1";

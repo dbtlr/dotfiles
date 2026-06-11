@@ -575,6 +575,15 @@ cmd_install() {
   else
     sudo apt-get update
     { grep -vE '^\s*(#|$)' "$DOTFILES_DIR/manifests/apt-packages.txt" || true; } | xargs -r sudo apt-get install -y
+
+    # Unattended security upgrades (asgard). Config copied under a -dotfiles
+    # suffix so the distro's own 50unattended-upgrades isn't clobbered;
+    # 20auto-upgrades holds the canonical Periodic switches. Idempotent.
+    sudo apt-get install -y unattended-upgrades
+    sudo cp "$DOTFILES_DIR/manifests/50unattended-upgrades" /etc/apt/apt.conf.d/50unattended-upgrades-dotfiles
+    printf 'APT::Periodic::Update-Package-Lists "1";\nAPT::Periodic::Unattended-Upgrade "1";\n' \
+      | sudo tee /etc/apt/apt.conf.d/20auto-upgrades >/dev/null
+    green "unattended-upgrades configured (security-only)"
   fi
 
   cmd_apply
