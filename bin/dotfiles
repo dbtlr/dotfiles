@@ -91,30 +91,40 @@ render_init_cache() {
   # on Linux), so an out-of-band `mise upgrade`/`mise uninstall` can leave them
   # stale until the next `dotfiles apply` or `dotfiles upgrade` regenerates
   # them (the dotfiles-managed flow always regenerates).
+  # Atomic writes (tmp + mv, same pattern as render_starship): a shell starting
+  # mid-regeneration must never source a truncated cache.
+  local f
+  f="$dir/brew.zsh"
   if command -v brew >/dev/null; then
-    brew shellenv zsh > "$dir/brew.zsh" 2>/dev/null || rm -f "$dir/brew.zsh"
+    if brew shellenv zsh > "$f.tmp" 2>/dev/null; then mv "$f.tmp" "$f"; else rm -f "$f.tmp" "$f"; fi
   else
-    rm -f "$dir/brew.zsh"
+    rm -f "$f"
   fi
+  f="$dir/mise.zsh"
   if command -v mise >/dev/null; then
     # `mise activate` emits a verbatim snapshot of the generating PATH
     # (export PATH='…') — a no-op when eval'd live, but it would clobber the
     # interactive shell's PATH when sourced from cache. Strip it; the precmd
     # hook manages PATH dynamically.
-    mise activate zsh 2>/dev/null | grep -v '^export PATH=' > "$dir/mise.zsh" \
-      || rm -f "$dir/mise.zsh"
+    if mise activate zsh 2>/dev/null | grep -v '^export PATH=' > "$f.tmp"; then
+      mv "$f.tmp" "$f"
+    else
+      rm -f "$f.tmp" "$f"
+    fi
   else
-    rm -f "$dir/mise.zsh"
+    rm -f "$f"
   fi
+  f="$dir/zoxide.zsh"
   if command -v zoxide >/dev/null; then
-    zoxide init zsh > "$dir/zoxide.zsh" 2>/dev/null || rm -f "$dir/zoxide.zsh"
+    if zoxide init zsh > "$f.tmp" 2>/dev/null; then mv "$f.tmp" "$f"; else rm -f "$f.tmp" "$f"; fi
   else
-    rm -f "$dir/zoxide.zsh"
+    rm -f "$f"
   fi
+  f="$dir/starship.zsh"
   if command -v starship >/dev/null; then
-    starship init zsh --print-full-init > "$dir/starship.zsh" 2>/dev/null || rm -f "$dir/starship.zsh"
+    if starship init zsh --print-full-init > "$f.tmp" 2>/dev/null; then mv "$f.tmp" "$f"; else rm -f "$f.tmp" "$f"; fi
   else
-    rm -f "$dir/starship.zsh"
+    rm -f "$f"
   fi
   green "rendered init caches"
 }
@@ -230,6 +240,12 @@ cmd_doctor() {
 cmd_upgrade() {
   local auto=0
   [ "${1:-}" = "--auto" ] && auto=1
+
+  # Shares the sync run lock: scheduler-vs-manual (or sync-vs-upgrade) overlap
+  # would race git and the init caches. Trap releases the lock on any exit.
+  trap _run_exit_trap EXIT
+  acquire_run_lock || return 0
+
   mkdir -p "$DOTFILES_DIR/state"
   local failures=0
 
@@ -303,9 +319,52 @@ cmd_upgrade() {
 # Overridable for tests (fixture harness sets 0 so fresh writes don't trip it).
 QUIET_PERIOD_MINS="${DOTFILES_QUIET_MINS:-30}"
 
+_SYNC_STATE_WRITTEN=0
+_SYNC_ACTIVE=0
+_RUN_LOCK_DIR=""
+
 _sync_state() {  # _sync_state <status> <detail...>
   mkdir -p "$DOTFILES_DIR/state"
   printf '%s %s %s\n' "$(date '+%Y-%m-%dT%H:%M:%S%z')" "$1" "${*:2}" > "$DOTFILES_DIR/state/last-sync"
+  _SYNC_STATE_WRITTEN=1
+}
+
+# Never-silent deaths: under set -e any command failure between cmd_sync's
+# start and its first _sync_state write would otherwise exit without a trace
+# in last-sync (status would lie with the previous run's record). The EXIT
+# trap backfills a red 'failed' state. Doubles as the run-lock release point
+# for both sync and upgrade.
+_run_exit_trap() {
+  local rc=$?
+  if [ "$_SYNC_ACTIVE" = "1" ] && [ "$_SYNC_STATE_WRITTEN" != "1" ] && [ "$rc" -ne 0 ]; then
+    _sync_state failed "sync died unexpectedly (see state/log)" || true
+  fi
+  if [ -n "$_RUN_LOCK_DIR" ]; then
+    rm -rf "$_RUN_LOCK_DIR"
+  fi
+}
+
+# Cross-run mutual exclusion for sync/upgrade (scheduler + manual overlap).
+# mkdir is the portable atomic primitive — flock(1) doesn't exist on macOS.
+# Returns 1 when another live run holds the lock (callers exit 0: a missed
+# scheduled run is cheap); stale locks (dead pid) are reclaimed.
+acquire_run_lock() {
+  local lock="$DOTFILES_DIR/state/run.lock" pid
+  mkdir -p "$DOTFILES_DIR/state"
+  if ! mkdir "$lock" 2>/dev/null; then
+    pid="$(cat "$lock/pid" 2>/dev/null || true)"
+    if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+      yellow "another dotfiles run in progress (pid $pid) — skipping"
+      return 1
+    fi
+    rm -rf "$lock"   # stale: owner is gone
+    if ! mkdir "$lock" 2>/dev/null; then
+      yellow "could not acquire run lock ($lock) — skipping"
+      return 1
+    fi
+  fi
+  echo $$ > "$lock/pid"
+  _RUN_LOCK_DIR="$lock"
 }
 
 _recently_edited() {
@@ -313,19 +372,30 @@ _recently_edited() {
   # 0 disables the guard entirely (BSD find treats `-mmin -0` as matching
   # fresh files, so don't let it near find).
   if [ "$QUIET_PERIOD_MINS" -le 0 ] 2>/dev/null; then return 1; fi
-  local f
-  while IFS= read -r f; do
-    [ -f "$DOTFILES_DIR/$f" ] || continue
-    if [ -n "$(find "$DOTFILES_DIR/$f" -mmin "-$QUIET_PERIOD_MINS" 2>/dev/null)" ]; then
-      return 0
-    fi
-  done < <(git -C "$DOTFILES_DIR" status --porcelain | awk '{print $2}')
+  # -z: NUL-delimited, paths verbatim (no quoting, spaces survive). Tokens are
+  # "XY <path>", except a rename emits its second path as a bare extra token —
+  # so try each token both prefix-stripped and raw, and stat whichever exists.
+  local entry f
+  while IFS= read -r -d '' entry; do
+    for f in "${entry:3}" "$entry"; do
+      [ -n "$f" ] || continue
+      [ -f "$DOTFILES_DIR/$f" ] || continue
+      if [ -n "$(find "$DOTFILES_DIR/$f" -mmin "-$QUIET_PERIOD_MINS" 2>/dev/null)" ]; then
+        return 0
+      fi
+    done
+  done < <(git -C "$DOTFILES_DIR" status --porcelain -z)
   return 1
 }
 
 cmd_sync() {
   local auto=0
   [ "${1:-}" = "--auto" ] && auto=1
+
+  # Cross-run lock + never-silent-death trap (the trap also releases the lock).
+  trap _run_exit_trap EXIT
+  acquire_run_lock || return 0
+  _SYNC_ACTIVE=1
 
   # 1. Guards
   if [ -e "$DOTFILES_DIR/.git/rebase-merge" ] || [ -e "$DOTFILES_DIR/.git/rebase-apply" ] || [ -f "$DOTFILES_DIR/.git/MERGE_HEAD" ]; then
@@ -336,11 +406,22 @@ cmd_sync() {
   fi
 
   # 2. Commit local changes
+  local committed=0
   if [ -n "$(git -C "$DOTFILES_DIR" status --porcelain)" ]; then
     git -C "$DOTFILES_DIR" add -A
     git -C "$DOTFILES_DIR" commit -m "auto($(hostname -s | tr '[:upper:]' '[:lower:]')): sync $(date '+%Y-%m-%d %H:%M')" \
       || { _sync_state failed "commit failed"; red "sync: commit failed"; return 1; }
     green "committed local changes"
+    committed=1
+  fi
+
+  # 2b. A fresh local commit must prove itself before it may propagate: the
+  # smoke test exercises the already-live (symlinked) config. On failure the
+  # commit stays local and nothing reaches origin.
+  if [ "$committed" -eq 1 ] && ! "$DOTFILES_DIR/bin/zsh-smoke-test" 60; then
+    _sync_state failed "local config fails smoke test — not propagating"
+    red "sync: local config fails smoke test — not propagating (commit stays local)"
+    return 1
   fi
 
   local pre_pull
@@ -350,6 +431,24 @@ cmd_sync() {
   if ! git -C "$DOTFILES_DIR" fetch origin main 2>/dev/null; then
     _sync_state offline "fetch failed (offline?)"; yellow "sync: fetch failed (offline?) — will retry"; return 0
   fi
+
+  # 3b. Quarantine: a previous run auto-reverted the commit at origin's tip.
+  # While origin still points at it, refuse to pull/apply it again — the red
+  # MOTD re-asserts every run instead of a 30-min revert thrash loop. Local
+  # commits keep accumulating on main and push once origin moves to a fix.
+  local quarantine="$DOTFILES_DIR/state/quarantine" bad_sha=""
+  if [ -f "$quarantine" ]; then
+    read -r bad_sha < "$quarantine" || true
+    if [ -n "$bad_sha" ] && [ "$(git -C "$DOTFILES_DIR" rev-parse origin/main)" = "$bad_sha" ]; then
+      if [ "$(git -C "$DOTFILES_DIR" rev-list --count origin/main..HEAD)" -gt 0 ]; then
+        yellow "push deferred (quarantine active)"
+      fi
+      _sync_state reverted "bad commit $bad_sha still at origin tip — fix and push"
+      red "sync: bad commit $bad_sha still at origin tip — fix and push (not re-applying)"
+      return 1
+    fi
+  fi
+
   if ! git -C "$DOTFILES_DIR" pull --rebase origin main; then
     git -C "$DOTFILES_DIR" rebase --abort 2>/dev/null || true
     _sync_state conflict "rebase conflict — resolve manually"
@@ -359,8 +458,13 @@ cmd_sync() {
 
   # 4. Push (tolerant)
   if [ "$(git -C "$DOTFILES_DIR" rev-list --count origin/main..HEAD)" -gt 0 ]; then
-    git -C "$DOTFILES_DIR" push origin main && green "pushed" \
-      || yellow "push failed (offline?) — will retry next run"
+    if git -C "$DOTFILES_DIR" push origin main; then
+      green "pushed"
+    elif [ -f "$quarantine" ]; then
+      yellow "push deferred (quarantine active)"
+    else
+      yellow "push failed (offline?) — will retry next run"
+    fi
   fi
 
   # 5-7. Apply + manifest installs + smoke/auto-revert, only if the pull moved us
@@ -371,7 +475,7 @@ cmd_sync() {
     cmd_apply
     git -C "$DOTFILES_DIR" submodule update --init --depth 1
 
-    if echo "$changed" | grep -q 'packages/mise.*\.toml'; then
+    if echo "$changed" | grep -Eq '^packages/mise(-linux)?/.*\.toml'; then
       mise install && green "mise tools installed (manifest changed)" || yellow "mise install failed"
     fi
     if [ "$DOTFILES_OS" = "macos" ] && echo "$changed" | grep -q 'manifests/Brewfile'; then
@@ -381,25 +485,33 @@ cmd_sync() {
       yellow "apt manifest changed — run: dotfiles install (sudo required)"
     fi
 
-    # Smoke test + auto-revert
+    # Smoke test + auto-revert + quarantine. Revert stays ON main (checkout -B
+    # resets the branch, no detached HEAD): local work keeps landing on main
+    # and survives; the quarantined origin tip is what we refuse to re-pull.
     if ! "$DOTFILES_DIR/bin/zsh-smoke-test" 60; then
+      local bad_tip
+      bad_tip="$(git -C "$DOTFILES_DIR" rev-parse origin/main)"
       red "smoke test FAILED after applying $post_pull — auto-reverting to $pre_pull"
-      git -C "$DOTFILES_DIR" checkout "$pre_pull" 2>/dev/null
+      git -C "$DOTFILES_DIR" checkout -B main "$pre_pull" 2>/dev/null
+      printf '%s\n' "$bad_tip" > "$quarantine"
       cmd_apply
       if "$DOTFILES_DIR/bin/zsh-smoke-test" 60; then
-        _sync_state reverted "bad commit $post_pull — reverted to $pre_pull; fix and push"
-        red "auto-reverted: $post_pull broke the shell (now detached at $pre_pull)"
+        _sync_state reverted "bad commit $bad_tip — reverted to $pre_pull; fix and push"
+        red "auto-reverted: $bad_tip broke the shell (main reset to $pre_pull; quarantined until origin moves)"
       else
         _sync_state broken "smoke fails even after revert — manual intervention"
         red "sync: shell broken even after revert — see docs/RECOVERY.md"
       fi
       return 1
     fi
+    rm -f "$quarantine"
     _sync_state ok "pulled $(git -C "$DOTFILES_DIR" rev-list --count "$pre_pull".."$post_pull") commit(s), applied"
   else
+    rm -f "$quarantine"   # converged on a non-quarantined tip — nothing left to prove
     _sync_state ok "up to date"
   fi
   green "sync ok"
+  _SYNC_ACTIVE=0
 }
 
 # Days since a YYYY-MM-DD date (BSD vs GNU date), "?" if unparseable.
@@ -468,11 +580,21 @@ cmd_status() {
   local red_sync="" yellow_sync=""
   case "$sync_status" in
     conflict) red_sync="sync conflict: $sync_detail — resolve in $DOTFILES_DIR, then: dotfiles sync" ;;
-    reverted) red_sync="sync auto-reverted: $sync_detail (recover: git checkout main, fix, push)" ;;
+    reverted) red_sync="sync auto-reverted: $sync_detail (recover: fix the bad commit — here or on another host — and push; this machine un-quarantines on the next sync)" ;;
     broken)   red_sync="sync: $sync_detail — see docs/RECOVERY.md" ;;
     failed)   red_sync="sync failed: $sync_detail" ;;
     blocked|offline|skipped) yellow_sync="sync $sync_status: $sync_detail" ;;
   esac
+
+  # Staleness: schedulers should run sync every ~30 min; >24h of silence means
+  # they're not firing. Yellow-class (informational), never bypasses debounce.
+  local sync_stale="" sync_age=""
+  if [ -n "$sync_ts" ]; then
+    sync_age="$(age_mins "$sync_ts")"
+    if [ "$sync_age" != "?" ] && [ "$sync_age" -gt 1440 ]; then
+      sync_stale="sync: stale (no run in $((sync_age / 60))h) — check schedulers (dotfiles doctor)"
+    fi
+  fi
 
   if [ "$motd" -eq 1 ]; then
     # Daily debounce: all-green and already shown today → stay silent.
@@ -500,6 +622,7 @@ cmd_status() {
       yellow "$out_count $out_label — run: dotfiles upgrade"
     fi
     [ -n "$yellow_sync" ] && yellow "$yellow_sync"
+    [ -n "$sync_stale" ] && yellow "$sync_stale"
     return 0
   fi
 
@@ -525,6 +648,8 @@ cmd_status() {
     yellow "sync: no record — run: dotfiles sync"
   elif [ -n "$red_sync" ]; then
     red "$red_sync"
+  elif [ -n "$sync_stale" ]; then
+    yellow "$sync_stale"
   elif [ -n "$yellow_sync" ]; then
     yellow "$yellow_sync"
   else
@@ -538,15 +663,26 @@ cmd_status() {
 install_schedulers() {
   mkdir -p "$DOTFILES_DIR/state/log"
   if [ "$DOTFILES_OS" = "macos" ]; then
-    local label dest
+    local label dest attempt loaded
     mkdir -p "$HOME/Library/LaunchAgents"
     for label in com.dbtlr.dotfiles.sync com.dbtlr.dotfiles.upgrade; do
       dest="$HOME/Library/LaunchAgents/$label.plist"
       sed "s|__HOME__|$HOME|g" "$DOTFILES_DIR/schedulers/launchd/$label.plist" > "$dest"
       # Idempotent reload: bootout is a no-op (ignored) when not loaded.
       launchctl bootout "gui/$(id -u)/$label" 2>/dev/null || true
-      launchctl bootstrap "gui/$(id -u)" "$dest"
-      green "launchd agent loaded: $label"
+      # bootstrap can fail transiently (e.g. right after a bootout) — retry
+      # once, and tolerate total failure (set -e!) with a manual hint rather
+      # than aborting the rest of the install.
+      loaded=0
+      for attempt in 1 2; do
+        if launchctl bootstrap "gui/$(id -u)" "$dest"; then loaded=1; break; fi
+        sleep 1
+      done
+      if [ "$loaded" -eq 1 ]; then
+        green "launchd agent loaded: $label"
+      else
+        yellow "could not load $label — load manually: launchctl bootstrap gui/$(id -u) $dest"
+      fi
     done
   elif [ "$DOTFILES_OS" = "linux" ]; then
     mkdir -p "$HOME/.config/systemd/user"
