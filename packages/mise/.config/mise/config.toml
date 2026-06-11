@@ -10,3 +10,4 @@ just = "latest"
 
 claude = "latest"
 codex = "latest"
+"npm:agent-browser" = "latest"
