@@ -406,22 +406,11 @@ cmd_sync() {
   fi
 
   # 2. Commit local changes
-  local committed=0
   if [ -n "$(git -C "$DOTFILES_DIR" status --porcelain)" ]; then
     git -C "$DOTFILES_DIR" add -A
     git -C "$DOTFILES_DIR" commit -m "auto($(hostname -s | tr '[:upper:]' '[:lower:]')): sync $(date '+%Y-%m-%d %H:%M')" \
       || { _sync_state failed "commit failed"; red "sync: commit failed"; return 1; }
     green "committed local changes"
-    committed=1
-  fi
-
-  # 2b. A fresh local commit must prove itself before it may propagate: the
-  # smoke test exercises the already-live (symlinked) config. On failure the
-  # commit stays local and nothing reaches origin.
-  if [ "$committed" -eq 1 ] && ! "$DOTFILES_DIR/bin/zsh-smoke-test" 60; then
-    _sync_state failed "local config fails smoke test — not propagating"
-    red "sync: local config fails smoke test — not propagating (commit stays local)"
-    return 1
   fi
 
   local pre_pull
@@ -447,6 +436,21 @@ cmd_sync() {
       red "sync: bad commit $bad_sha still at origin tip — fix and push (not re-applying)"
       return 1
     fi
+  fi
+
+  # 3c. Smoke-gate UNPUSHED work, not just this run's commit: a broken commit
+  # blocked on a previous run leaves the tree clean but the branch ahead — it
+  # must still prove itself (live, symlinked config) before it may propagate.
+  # Placed after the fetch (origin/main is fresh) and after the quarantine
+  # check (a quarantined tip returns above — that red state wins). When ahead
+  # is 0 there is nothing to push, so the gate stays out of the way: pulls
+  # must never be blocked by local breakage — the fix has to be able to land
+  # (post-pull smoke + auto-revert covers the receiving side).
+  if [ "$(git -C "$DOTFILES_DIR" rev-list --count origin/main..HEAD)" -gt 0 ] \
+      && ! "$DOTFILES_DIR/bin/zsh-smoke-test" 60; then
+    _sync_state failed "local config fails smoke test — not propagating"
+    red "sync: local config fails smoke test — not propagating (commits stay local)"
+    return 1
   fi
 
   if ! git -C "$DOTFILES_DIR" pull --rebase origin main; then
