@@ -10,7 +10,9 @@ PACKAGES_DIR="$DOTFILES_DIR/packages"
 # in plain bash (no `mise activate`), so put both on PATH up front: install
 # needs the mise binary, doctor/upgrade need to see mise-managed tools
 # (e.g. starship on Linux) the same way an interactive shell does.
-export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
+# Also add both brew bin dirs: launchd/systemd give a minimal PATH, so
+# unattended runs won't resolve brew otherwise.
+export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:/opt/homebrew/bin:/usr/local/bin:$PATH"
 
 case "$(uname -s)" in
   Darwin) DOTFILES_OS="macos" ;;
@@ -151,28 +153,39 @@ cmd_upgrade() {
       [ "$casks" -gt 0 ] && yellow "$casks cask(s) outdated — run: dotfiles upgrade"
     else
       # --- Manual bucket: casks ---
-      if [ "$casks" -gt 0 ]; then brew upgrade --cask && casks=0; fi
-      green "casks up to date"
+      if [ "$casks" -gt 0 ]; then
+        if brew upgrade --cask; then
+          casks=0
+          green "casks upgraded"
+        else
+          red "cask upgrade failed"; failures=$((failures+1))
+        fi
+      else
+        green "casks up to date"
+      fi
     fi
     printf 'casks_outdated=%s\n' "$casks" > "$DOTFILES_DIR/state/outdated"
   else
     local debs
+    # sudo-free count: relies on the apt-daily timers keeping package lists fresh
     debs="$(apt-get -s upgrade 2>/dev/null | grep -c '^Inst' || true)"
     if [ "$auto" -eq 1 ]; then
       [ "$debs" -gt 0 ] && yellow "$debs apt package(s) upgradable — run: dotfiles upgrade"
     else
       # --- Manual bucket: apt (interactive sudo) ---
-      sudo apt-get update
-      sudo apt-get upgrade -y
-      debs=0
-      green "apt packages upgraded"
+      if sudo apt-get update && sudo apt-get upgrade -y; then
+        debs=0
+        green "apt packages upgraded"
+      else
+        red "apt upgrade failed"; failures=$((failures+1))
+      fi
     fi
     printf 'apt_upgradable=%s\n' "$debs" > "$DOTFILES_DIR/state/outdated"
   fi
 
-  printf '%s %s\n' "$(date '+%Y-%m-%dT%H:%M:%S')" "$([ "$failures" -eq 0 ] && echo ok || echo "failed=$failures")" \
+  printf '%s %s\n' "$(date '+%Y-%m-%dT%H:%M:%S%z')" "$([ "$failures" -eq 0 ] && echo ok || echo "failed=$failures")" \
     > "$DOTFILES_DIR/state/last-upgrade"
-  [ "$failures" -eq 0 ]
+  [ "$failures" -eq 0 ] && return 0 || return 1
 }
 
 cmd_install() {
@@ -185,7 +198,7 @@ cmd_install() {
     brew bundle --file="$DOTFILES_DIR/manifests/Brewfile"
   else
     sudo apt-get update
-    grep -vE '^\s*(#|$)' "$DOTFILES_DIR/manifests/apt-packages.txt" | xargs sudo apt-get install -y
+    { grep -vE '^\s*(#|$)' "$DOTFILES_DIR/manifests/apt-packages.txt" || true; } | xargs -r sudo apt-get install -y
   fi
 
   cmd_apply
