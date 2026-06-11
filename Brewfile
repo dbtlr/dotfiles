@@ -29,6 +29,7 @@ brew "ripgrep"
 brew "dust"
 brew "btop"
 brew "starship"
+brew "hyperfine"
 
 # Dev tools
 brew "mosh"
