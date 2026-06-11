@@ -1,0 +1,238 @@
+#!/usr/bin/env bash
+# Integration tests for `dotfiles sync` against throwaway local git fixtures.
+#
+# Builds a sandbox in mktemp -d: bare origin.git + two clones (A "valhalla",
+# B "other host"), each a minimal-but-real dotfiles repo (this repo's
+# bin/dotfiles + bin/zsh-smoke-test, a tiny packages/shell zshrc, starship
+# base, empty manifests). Each clone gets its own fake $HOME so stow targets
+# and the interactive-zsh smoke test never touch the real home directory.
+# Runs the REAL CLI (`<clone>/bin/dotfiles sync --auto`) per scenario and
+# asserts on state/last-sync + git state. Exits non-zero on any FAIL.
+set -uo pipefail
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SANDBOX="$(mktemp -d)"
+trap 'rm -rf "$SANDBOX"' EXIT
+
+# Never read the developer's git config (signing, hooks, templates...).
+# Exported, so the sync runs under test inherit it too.
+export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null
+unset DOTFILES_QUIET_MINS
+
+ORIGIN="$SANDBOX/origin.git"
+A="$SANDBOX/clone-a"          # "valhalla"
+B="$SANDBOX/clone-b"          # "other host"
+HOME_A="$SANDBOX/home-a"
+HOME_B="$SANDBOX/home-b"
+
+PASS_COUNT=0
+FAIL_COUNT=0
+
+pass() { printf '  \033[0;32mPASS\033[0m %s\n' "$*"; PASS_COUNT=$((PASS_COUNT + 1)); }
+fail() { printf '  \033[0;31mFAIL\033[0m %s\n' "$*"; FAIL_COUNT=$((FAIL_COUNT + 1)); }
+
+assert_eq() {  # assert_eq <desc> <expected> <actual>
+  if [ "$2" = "$3" ]; then pass "$1"; else fail "$1 (expected '$2', got '$3')"; fi
+}
+
+assert_contains() {  # assert_contains <desc> <needle> <haystack>
+  case "$3" in
+    *"$2"*) pass "$1" ;;
+    *) fail "$1 (no '$2' in: $3)" ;;
+  esac
+}
+
+scenario() { printf '\n\033[1m── Scenario %s\033[0m\n' "$*"; }
+
+last_sync() { cat "$1/state/last-sync" 2>/dev/null || echo "<no last-sync>"; }
+
+# run_sync <clone> <home> [extra env VAR=val ...] — runs the real CLI's
+# sync --auto with HOME redirected into the sandbox. Output in $SYNC_OUT,
+# exit code in $SYNC_RC.
+run_sync() {
+  local clone="$1" home="$2"; shift 2
+  SYNC_RC=0
+  SYNC_OUT="$(env HOME="$home" "$@" "$clone/bin/dotfiles" sync --auto 2>&1)" || SYNC_RC=$?
+}
+
+# ---------------------------------------------------------------- fixture ---
+
+echo "sandbox: $SANDBOX"
+
+seed="$SANDBOX/seed"
+mkdir -p "$seed/bin" "$seed/manifests" "$seed/packages/shell" \
+         "$seed/packages/starship/.config/starship" "$seed/vendor"
+cp "$REPO_ROOT/bin/dotfiles" "$REPO_ROOT/bin/zsh-smoke-test" "$seed/bin/"
+chmod +x "$seed/bin/dotfiles" "$seed/bin/zsh-smoke-test"
+
+cat > "$seed/packages/shell/.zshrc" <<'EOF'
+# sandbox zshrc (fixture) — must stay trivially valid
+export SANDBOX_ZSHRC=ok
+EOF
+cat > "$seed/packages/starship/.config/starship/base.toml" <<'EOF'
+# sandbox starship base (fixture)
+add_newline = false
+EOF
+: > "$seed/manifests/Brewfile"
+: > "$seed/manifests/apt-packages.txt"
+: > "$seed/vendor/.gitkeep"
+printf '/state/\n' > "$seed/.gitignore"
+
+git -C "$seed" init -q -b main
+git -C "$seed" config user.name "Fixture Seed"
+git -C "$seed" config user.email "fixture@example.invalid"
+git -C "$seed" add -A
+git -C "$seed" commit -q -m "seed: minimal dotfiles fixture"
+
+git init -q --bare -b main "$ORIGIN"
+git -C "$seed" remote add origin "$ORIGIN"
+git -C "$seed" push -q -u origin main
+
+git clone -q "$ORIGIN" "$A"
+git clone -q "$ORIGIN" "$B"
+for c in "$A" "$B"; do
+  git -C "$c" config user.name "Fixture $(basename "$c")"
+  git -C "$c" config user.email "fixture@example.invalid"
+done
+mkdir -p "$HOME_A" "$HOME_B"
+
+# Baseline: apply both clones into their fake homes; smoke must pass.
+scenario "0: fixture baseline (apply + smoke in fake homes)"
+for pair in "$A:$HOME_A" "$B:$HOME_B"; do
+  clone="${pair%%:*}" home="${pair##*:}"
+  if env HOME="$home" "$clone/bin/dotfiles" apply >/dev/null 2>&1; then
+    pass "apply in $(basename "$clone")"
+  else
+    fail "apply in $(basename "$clone")"
+  fi
+  if env HOME="$home" "$clone/bin/zsh-smoke-test" 30 >/dev/null 2>&1; then
+    pass "smoke test in fake home $(basename "$home")"
+  else
+    fail "smoke test in fake home $(basename "$home")"
+  fi
+done
+assert_eq "fake home .zshrc is the sandbox one" \
+  "ok" "$(env HOME="$HOME_B" zsh -ic 'echo $SANDBOX_ZSHRC' 2>/dev/null)"
+
+# ------------------------------------------------------------- scenarios ---
+
+scenario "1: clean propagate (push in A, sync in B pulls + applies)"
+printf 'alias sandbox_s1=true\n' >> "$A/packages/shell/.zshrc"
+git -C "$A" commit -qam "s1: add alias in A"
+git -C "$A" push -q origin main
+a_head="$(git -C "$A" rev-parse HEAD)"
+
+run_sync "$B" "$HOME_B" DOTFILES_QUIET_MINS=0
+assert_eq "exit code 0" 0 "$SYNC_RC"
+assert_eq "B HEAD == A's pushed commit" "$a_head" "$(git -C "$B" rev-parse HEAD)"
+assert_contains "last-sync records ok+applied" " ok pulled 1 commit(s), applied" "$(last_sync "$B")"
+assert_contains "stowed zshrc in fake home has the new alias" \
+  "sandbox_s1" "$(cat "$HOME_B/.zshrc")"
+
+scenario "2: dirty B -> auto-commit + push; A pulls it"
+printf 'alias sandbox_s2=true\n' >> "$B/packages/shell/.zshrc"
+run_sync "$B" "$HOME_B" DOTFILES_QUIET_MINS=0
+assert_eq "exit code 0" 0 "$SYNC_RC"
+assert_eq "B tree clean after sync" "" "$(git -C "$B" status --porcelain)"
+assert_contains "HEAD is an auto(<host>) commit" "auto(" \
+  "$(git -C "$B" log -1 --format=%s)"
+assert_eq "origin main == B HEAD (pushed)" \
+  "$(git -C "$B" rev-parse HEAD)" "$(git --git-dir="$ORIGIN" rev-parse main)"
+assert_contains "last-sync ok (up to date; push-only run)" " ok up to date" "$(last_sync "$B")"
+
+run_sync "$A" "$HOME_A" DOTFILES_QUIET_MINS=0
+assert_eq "A sync exit code 0" 0 "$SYNC_RC"
+assert_eq "A HEAD == B HEAD after pulling" \
+  "$(git -C "$B" rev-parse HEAD)" "$(git -C "$A" rev-parse HEAD)"
+assert_contains "A last-sync ok+applied" " ok pulled 1 commit(s), applied" "$(last_sync "$A")"
+
+scenario "3: quiet guard (fresh edit skips by default, proceeds with override)"
+printf '# s3 fresh edit\n' >> "$B/packages/shell/.zshrc"
+run_sync "$B" "$HOME_B"   # default 30-min quiet period; the edit is seconds old
+assert_eq "exit code 0 (skip is not an error)" 0 "$SYNC_RC"
+assert_contains "last-sync records skipped" " skipped active edits (<30m)" "$(last_sync "$B")"
+assert_contains "B still dirty (nothing committed)" \
+  "packages/shell/.zshrc" "$(git -C "$B" status --porcelain)"
+
+run_sync "$B" "$HOME_B" DOTFILES_QUIET_MINS=0
+assert_eq "override: exit code 0" 0 "$SYNC_RC"
+assert_eq "override: B tree clean (edit committed)" "" "$(git -C "$B" status --porcelain)"
+assert_eq "override: pushed to origin" \
+  "$(git -C "$B" rev-parse HEAD)" "$(git --git-dir="$ORIGIN" rev-parse main)"
+assert_contains "override: last-sync ok" " ok " "$(last_sync "$B")"
+
+scenario "4: rebase conflict -> abort, tree untouched, red state"
+git -C "$A" pull -q --rebase origin main   # converge A first
+printf 'alias side=a\n' >> "$A/packages/shell/.zshrc"
+git -C "$A" commit -qam "s4: A side"
+git -C "$A" push -q origin main
+printf 'alias side=b\n' >> "$B/packages/shell/.zshrc"
+git -C "$B" commit -qam "s4: B side"
+b_local="$(git -C "$B" rev-parse HEAD)"
+
+run_sync "$B" "$HOME_B" DOTFILES_QUIET_MINS=0
+assert_eq "exit code 1" 1 "$SYNC_RC"
+assert_contains "last-sync records conflict" " conflict rebase conflict" "$(last_sync "$B")"
+assert_eq "B HEAD still the local commit (rebase aborted)" \
+  "$b_local" "$(git -C "$B" rev-parse HEAD)"
+assert_eq "B tree clean post-abort" "" "$(git -C "$B" status --porcelain)"
+if [ ! -e "$B/.git/rebase-merge" ] && [ ! -e "$B/.git/rebase-apply" ]; then
+  pass "no rebase left in progress"
+else
+  fail "rebase still in progress"
+fi
+
+# Resolve: drop B's conflicting commit, take origin's version.
+git -C "$B" reset -q --hard origin/main
+
+scenario "5: auto-revert (A pushes a broken zshrc; B's smoke test fails in fake home)"
+cat > "$A/packages/shell/.zshrc" <<'EOF'
+# deliberately broken fixture zshrc
+echo "BROKEN_ZSHRC_MARKER" >&2
+exit 7
+EOF
+git -C "$A" commit -qam "s5: break zshrc"
+git -C "$A" push -q origin main
+b_good="$(git -C "$B" rev-parse HEAD)"
+b_bad="$(git -C "$A" rev-parse HEAD)"
+
+run_sync "$B" "$HOME_B" DOTFILES_QUIET_MINS=0
+assert_eq "exit code 1" 1 "$SYNC_RC"
+assert_contains "last-sync records reverted" \
+  " reverted bad commit $b_bad — reverted to $b_good; fix and push" "$(last_sync "$B")"
+assert_eq "B back at pre-pull commit (detached)" "$b_good" "$(git -C "$B" rev-parse HEAD)"
+assert_contains "smoke test exercised the FAKE home zshrc (marker in output)" \
+  "BROKEN_ZSHRC_MARKER" "$SYNC_OUT"
+assert_contains "fake home zshrc content reverted to the good version" \
+  "SANDBOX_ZSHRC=ok" "$(cat "$HOME_B/.zshrc")"
+if env HOME="$HOME_B" "$B/bin/zsh-smoke-test" 30 >/dev/null 2>&1; then
+  pass "smoke passes again after revert"
+else
+  fail "smoke still failing after revert"
+fi
+
+# Recovery path (what the red MOTD line tells the user): fix on another host,
+# then checkout main + sync.
+git -C "$A" revert --no-edit HEAD >/dev/null
+git -C "$A" push -q origin main
+git -C "$B" checkout -q main
+run_sync "$B" "$HOME_B" DOTFILES_QUIET_MINS=0
+assert_eq "recovery sync exit code 0" 0 "$SYNC_RC"
+assert_contains "recovery last-sync ok" " ok " "$(last_sync "$B")"
+assert_eq "B converged with origin" \
+  "$(git --git-dir="$ORIGIN" rev-parse main)" "$(git -C "$B" rev-parse HEAD)"
+
+scenario "6: offline (origin unreachable) -> yellow note, exit 0"
+mv "$ORIGIN" "$ORIGIN.offline"
+b_head="$(git -C "$B" rev-parse HEAD)"
+run_sync "$B" "$HOME_B" DOTFILES_QUIET_MINS=0
+assert_eq "exit code 0 (offline is not an error)" 0 "$SYNC_RC"
+assert_contains "last-sync records offline" " offline fetch failed (offline?)" "$(last_sync "$B")"
+assert_eq "B HEAD unchanged" "$b_head" "$(git -C "$B" rev-parse HEAD)"
+mv "$ORIGIN.offline" "$ORIGIN"
+
+# ---------------------------------------------------------------- summary ---
+
+printf '\n\033[1m%d passed, %d failed\033[0m\n' "$PASS_COUNT" "$FAIL_COUNT"
+[ "$FAIL_COUNT" -eq 0 ] || exit 1
+exit 0
