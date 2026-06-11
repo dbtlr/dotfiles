@@ -71,8 +71,10 @@ cmd_doctor() {
   # 3. Dangling symlinks in ~ and ~/.config that point into the repo
   local link
   while IFS= read -r link; do
-    yellow "dangling symlink: $link -> $(readlink "$link")"
-    failures=$((failures + 1))
+    case "$(readlink "$link")" in
+      *dotfiles*) yellow "dangling symlink: $link -> $(readlink "$link")"
+                  failures=$((failures + 1)) ;;
+    esac
   done < <(find "$HOME" -maxdepth 1 -type l ! -exec test -e {} \; -print 2>/dev/null;
            find "$HOME/.config" -maxdepth 3 -type l ! -exec test -e {} \; -print 2>/dev/null)
 
@@ -91,11 +93,15 @@ cmd_doctor() {
 }
 
 cmd_install() {
+  # mise's installer puts the binary in ~/.local/bin; install needs it on PATH
+  # before any shell restart picks it up.
+  export PATH="$HOME/.local/bin:$PATH"
+
   if [ "$DOTFILES_OS" = "macos" ]; then
     if ! command -v brew >/dev/null; then
       yellow "Installing Homebrew..."
       /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-      eval "$(/opt/homebrew/bin/brew shellenv)"
+      eval "$("$([ -x /opt/homebrew/bin/brew ] && echo /opt/homebrew/bin/brew || echo /usr/local/bin/brew)" shellenv)"
     fi
     brew bundle --file="$DOTFILES_DIR/manifests/Brewfile"
   else
@@ -107,6 +113,10 @@ cmd_install() {
     fi
   fi
 
+  # Stow packages before Oh My Zsh: its installer only honors KEEP_ZSHRC=yes
+  # when ~/.zshrc already exists.
+  cmd_apply
+
   # Oh My Zsh — still required by .zshrc until M2 removes it.
   # KEEP_ZSHRC stops the installer from replacing our (stowed) .zshrc.
   if [ ! -d "$HOME/.oh-my-zsh" ]; then
@@ -117,10 +127,9 @@ cmd_install() {
 
   # mise
   if ! command -v mise >/dev/null; then
-    curl https://mise.run | sh
+    curl -fsSL https://mise.run | sh
   fi
 
-  cmd_apply
   mise install
 
   # Default shell
