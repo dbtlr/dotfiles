@@ -1,8 +1,5 @@
 # macOS-specific settings
 
-# Homebrew
-eval "$(/opt/homebrew/bin/brew shellenv)"
-
 # macOS aliases
 alias o="open"
 alias finder="open -a Finder"
