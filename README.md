@@ -5,7 +5,7 @@ Personal dotfiles managed with [GNU Stow](https://www.gnu.org/software/stow/). C
 ## Installation
 
 ```bash
-git clone https://github.com/dbtlr/dotfiles.git ~/dotfiles
+git clone --recurse-submodules https://github.com/dbtlr/dotfiles.git ~/dotfiles
 ~/dotfiles/bin/dotfiles install
 ```
 
