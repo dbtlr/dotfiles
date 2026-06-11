@@ -1,42 +1,17 @@
-# Only run interactive stuff if interactive
-# [[ $- == *i* ]] || return
-
 # Local paths
 export PATH="$HOME/dotfiles/bin:$HOME/.bun/bin:$HOME/.local/bin:$HOME/.bin:/usr/local/bin:$PATH"
-export BUN_INSTALL_CACHE_DIR="/home/data/.cache/bun"
 
-# Oh My Zsh
-export ZSH="$HOME/.oh-my-zsh"
-plugins=(kubectl npm python bun bundler git)
-source $ZSH/oh-my-zsh.sh
-
-# Load modular configs
+# Load modular configs (00-context → … → tools, alphabetical)
 for config_file in ~/.config/zsh/*.zsh(-N); do
   source $config_file
 done
 
-# Run good_morning on shell start
+# Plugins (vendored; syntax-highlighting must be sourced last)
+source "$HOME/dotfiles/vendor/zsh-autosuggestions/zsh-autosuggestions.zsh"
+source "$HOME/dotfiles/vendor/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
+
+# Daily checks (replaced by dotfiles status --motd in M4)
 good_morning
 
-# Powerlevel10k theme
-# source $(brew --prefix)/share/powerlevel10k/powerlevel10k.zsh-theme
-# [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
-
-# Run starship prompt
+# Prompt
 eval "$(starship init zsh)"
-
-# pnpm
-export PNPM_HOME="/Users/${USER}/Library/pnpm"
-case ":$PATH:" in
-  *":$PNPM_HOME/bin:"*) ;;
-  *) export PATH="$PNPM_HOME/bin:$PATH" ;;
-esac
-# pnpm end
-
-[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
-
-
-[ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
-
-# bun completions
-[ -s "/Users/${USER}/.bun/_bun" ] && source "/Users/${USER}/.bun/_bun"

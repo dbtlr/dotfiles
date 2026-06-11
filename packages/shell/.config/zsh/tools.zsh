@@ -4,7 +4,7 @@ eval "$(zoxide init zsh)"
 cd() {
   if [[ "$CLAUDECODE" == "1" ]]; then
     builtin cd "$@"
-    exit "$?"
+    return $?
   fi
 
   if command -v z > /dev/null; then

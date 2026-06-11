@@ -10,7 +10,7 @@ case "$OSTYPE" in
 esac
 
 # --- Host Detection ---
-export DOTFILES_HOST="${HOST%%.*}"
+export DOTFILES_HOST="${(L)HOST%%.*}"
 
 # --- Terminal Detection ---
 export DOTFILES_TERMINAL="unknown"

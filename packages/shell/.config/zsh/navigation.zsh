@@ -1,5 +1,5 @@
 # Quick navigation to $CODE_ROOT directories
-CODE_ROOT="~/src"
+CODE_ROOT="$HOME/src"
 
 d() {
   if [ -z "$1" ]; then

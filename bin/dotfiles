@@ -48,6 +48,14 @@ cmd_doctor() {
     fi
   done
 
+  # Vendored plugins present? (submodules need init after a plain clone)
+  if [ -f "$DOTFILES_DIR/vendor/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ]; then
+    green "vendor submodules initialized"
+  else
+    red "vendor submodules missing (run: dotfiles install)"
+    failures=$((failures + 1))
+  fi
+
   # 2. Every file in every host package is correctly symlinked into ~
   local pkg src rel target missing
   for pkg in $(packages_for_host); do
@@ -113,17 +121,10 @@ cmd_install() {
     fi
   fi
 
-  # Stow packages before Oh My Zsh: its installer only honors KEEP_ZSHRC=yes
-  # when ~/.zshrc already exists.
   cmd_apply
 
-  # Oh My Zsh — still required by .zshrc until M2 removes it.
-  # KEEP_ZSHRC stops the installer from replacing our (stowed) .zshrc.
-  if [ ! -d "$HOME/.oh-my-zsh" ]; then
-    yellow "Installing Oh My Zsh..."
-    RUNZSH=no KEEP_ZSHRC=yes sh -c \
-      "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
-  fi
+  # Vendored zsh plugins (vendor/ submodules)
+  git -C "$DOTFILES_DIR" submodule update --init --depth 1
 
   # mise
   if ! command -v mise >/dev/null; then

@@ -1,0 +1,19 @@
+# Completion system — native compinit with a 24h-cached dump.
+fpath=("$HOME/dotfiles/vendor/zsh-completions/src" $fpath)
+
+autoload -Uz compinit
+() {
+  setopt local_options extended_glob
+  local zcd="$HOME/.zcompdump"
+  if [[ -n $zcd(#qN.mh-24) ]]; then
+    compinit -C -d "$zcd"   # dump fresher than 24h: skip the security scan
+  else
+    compinit -d "$zcd"      # missing or stale: full scan, then refresh mtime
+    touch "$zcd"
+  fi
+}
+
+zmodload zsh/complist
+zstyle ':completion:*' menu select
+# Case-insensitive (and partial-word) matching, like OMZ's default
+zstyle ':completion:*' matcher-list 'm:{a-zA-Z-_}={A-Za-z_-}' 'r:|=*' 'l:|=* r:|=*'
