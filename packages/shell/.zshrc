@@ -2,7 +2,7 @@
 # [[ $- == *i* ]] || return
 
 # Local paths
-export PATH="$HOME/.bun/bin:$HOME/.local/bin:$HOME/.bin:/usr/local/bin:$PATH"
+export PATH="$HOME/dotfiles/bin:$HOME/.bun/bin:$HOME/.local/bin:$HOME/.bin:/usr/local/bin:$PATH"
 export BUN_INSTALL_CACHE_DIR="/home/data/.cache/bun"
 
 # Oh My Zsh
