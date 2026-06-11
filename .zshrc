@@ -40,7 +40,3 @@ esac
 
 # bun completions
 [ -s "/Users/${USER}/.bun/_bun" ] && source "/Users/${USER}/.bun/_bun"
-
-# >>> vault completions (added by 'vault completions install' on 2026-05-18) >>>
-command -v vault &> /dev/null 2>&1 && eval "$(vault completions init zsh)" || true
-# <<< vault completions <<<
