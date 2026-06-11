@@ -1,0 +1,4 @@
+# Linux-only tools not available (or too old) in Ubuntu apt.
+# Lives in conf.d so the main config.toml stays shared across all hosts.
+[tools]
+starship = "latest"

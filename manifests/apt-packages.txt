@@ -1,0 +1,22 @@
+# Server CLI packages for Ubuntu hosts (one per line; # comments OK)
+# Names verified against ubuntu:24.04 in M3 Docker validation.
+build-essential
+git
+zsh
+stow
+curl
+wget
+tree
+jq
+htop
+btop
+bat
+fd-find
+fzf
+ripgrep
+zoxide
+eza
+gh
+tmux
+mosh
+neovim
