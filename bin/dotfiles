@@ -38,16 +38,19 @@ packages_for_host() {
 
 cmd_apply() {
   command -v stow >/dev/null || { red "GNU stow is not installed"; exit 1; }
-  local pkg src rel target
+  local pkg src rel target stamp
   for pkg in $(packages_for_host); do
     # Fresh machines ship skeleton files (.bashrc, .profile, ...); stow
     # refuses to replace real files, so move obstructions aside first.
+    # Dated suffix: repeated applies (e.g. sync's auto-revert) never clobber
+    # an earlier backup.
     while IFS= read -r src; do
       rel="${src#"$PACKAGES_DIR/$pkg/"}"
       target="$HOME/$rel"
       if { [ -e "$target" ] || [ -L "$target" ]; } && [ ! "$target" -ef "$src" ]; then
-        yellow "moved aside: ~/$rel -> ~/$rel.pre-stow"
-        mv "$target" "$target.pre-stow"
+        stamp="$(date +%Y%m%d-%H%M%S)"
+        yellow "moved aside: ~/$rel -> ~/$rel.backup-$stamp"
+        mv "$target" "$target.backup-$stamp"
       fi
     done < <(find "$PACKAGES_DIR/$pkg" -type f)
     stow --no-folding -d "$PACKAGES_DIR" -t "$HOME" -R "$pkg"
@@ -252,6 +255,108 @@ cmd_upgrade() {
   [ "$failures" -eq 0 ] && return 0 || return 1
 }
 
+# --- sync: the converge loop (spec: commit -> pull --rebase -> push ->
+# apply -> manifest installs -> smoke test with auto-revert) ---
+
+# Overridable for tests (fixture harness sets 0 so fresh writes don't trip it).
+QUIET_PERIOD_MINS="${DOTFILES_QUIET_MINS:-30}"
+
+_sync_state() {  # _sync_state <status> <detail...>
+  mkdir -p "$DOTFILES_DIR/state"
+  printf '%s %s %s\n' "$(date '+%Y-%m-%dT%H:%M:%S%z')" "$1" "${*:2}" > "$DOTFILES_DIR/state/last-sync"
+}
+
+_recently_edited() {
+  # Any tracked-or-untracked (non-ignored) file modified within the quiet period?
+  local f
+  while IFS= read -r f; do
+    [ -f "$DOTFILES_DIR/$f" ] || continue
+    if [ -n "$(find "$DOTFILES_DIR/$f" -mmin "-$QUIET_PERIOD_MINS" 2>/dev/null)" ]; then
+      return 0
+    fi
+  done < <(git -C "$DOTFILES_DIR" status --porcelain | awk '{print $2}')
+  return 1
+}
+
+cmd_sync() {
+  local auto=0
+  [ "${1:-}" = "--auto" ] && auto=1
+
+  # 1. Guards
+  if [ -e "$DOTFILES_DIR/.git/rebase-merge" ] || [ -e "$DOTFILES_DIR/.git/rebase-apply" ] || [ -f "$DOTFILES_DIR/.git/MERGE_HEAD" ]; then
+    _sync_state blocked "repo mid-rebase/merge"; red "sync blocked: repo mid-rebase/merge"; return 1
+  fi
+  if [ "$auto" -eq 1 ] && _recently_edited; then
+    _sync_state skipped "active edits (<${QUIET_PERIOD_MINS}m)"; yellow "sync skipped: active edits"; return 0
+  fi
+
+  # 2. Commit local changes
+  if [ -n "$(git -C "$DOTFILES_DIR" status --porcelain)" ]; then
+    git -C "$DOTFILES_DIR" add -A
+    git -C "$DOTFILES_DIR" commit -m "auto($(hostname -s | tr '[:upper:]' '[:lower:]')): sync $(date '+%Y-%m-%d %H:%M')" \
+      || { _sync_state failed "commit failed"; red "sync: commit failed"; return 1; }
+    green "committed local changes"
+  fi
+
+  local pre_pull
+  pre_pull="$(git -C "$DOTFILES_DIR" rev-parse HEAD)"
+
+  # 3. Pull (rebase); conflict => abort untouched + red flag
+  if ! git -C "$DOTFILES_DIR" fetch origin main 2>/dev/null; then
+    _sync_state offline "fetch failed (offline?)"; yellow "sync: fetch failed (offline?) — will retry"; return 0
+  fi
+  if ! git -C "$DOTFILES_DIR" pull --rebase origin main; then
+    git -C "$DOTFILES_DIR" rebase --abort 2>/dev/null || true
+    _sync_state conflict "rebase conflict — resolve manually"
+    red "sync BLOCKED: rebase conflict — resolve manually in $DOTFILES_DIR"
+    return 1
+  fi
+
+  # 4. Push (tolerant)
+  if [ "$(git -C "$DOTFILES_DIR" rev-list --count origin/main..HEAD)" -gt 0 ]; then
+    git -C "$DOTFILES_DIR" push origin main && green "pushed" \
+      || yellow "push failed (offline?) — will retry next run"
+  fi
+
+  # 5-7. Apply + manifest installs + smoke/auto-revert, only if the pull moved us
+  local post_pull changed
+  post_pull="$(git -C "$DOTFILES_DIR" rev-parse HEAD)"
+  if [ "$post_pull" != "$pre_pull" ]; then
+    changed="$(git -C "$DOTFILES_DIR" diff --name-only "$pre_pull" "$post_pull")"
+    cmd_apply
+    git -C "$DOTFILES_DIR" submodule update --init --depth 1
+
+    if echo "$changed" | grep -q 'packages/mise.*\.toml'; then
+      mise install && green "mise tools installed (manifest changed)" || yellow "mise install failed"
+    fi
+    if [ "$DOTFILES_OS" = "macos" ] && echo "$changed" | grep -q 'manifests/Brewfile'; then
+      brew bundle --no-upgrade --file="$DOTFILES_DIR/manifests/Brewfile" && green "brew bundle applied" || yellow "brew bundle failed"
+    fi
+    if [ "$DOTFILES_OS" = "linux" ] && echo "$changed" | grep -q 'manifests/apt-packages.txt'; then
+      yellow "apt manifest changed — run: dotfiles install (sudo required)"
+    fi
+
+    # Smoke test + auto-revert
+    if ! "$DOTFILES_DIR/bin/zsh-smoke-test" 60; then
+      red "smoke test FAILED after applying $post_pull — auto-reverting to $pre_pull"
+      git -C "$DOTFILES_DIR" checkout "$pre_pull" 2>/dev/null
+      cmd_apply
+      if "$DOTFILES_DIR/bin/zsh-smoke-test" 60; then
+        _sync_state reverted "bad commit $post_pull — reverted to $pre_pull; fix and push"
+        red "auto-reverted: $post_pull broke the shell (now detached at $pre_pull)"
+      else
+        _sync_state broken "smoke fails even after revert — manual intervention"
+        red "sync: shell broken even after revert — see docs/RECOVERY.md"
+      fi
+      return 1
+    fi
+    _sync_state ok "pulled $(git -C "$DOTFILES_DIR" rev-list --count "$pre_pull".."$post_pull") commit(s), applied"
+  else
+    _sync_state ok "up to date"
+  fi
+  green "sync ok"
+}
+
 # Days since a YYYY-MM-DD date (BSD vs GNU date), "?" if unparseable.
 age_days() {
   local ts
@@ -261,6 +366,17 @@ age_days() {
     ts="$(date -d "$1" '+%s' 2>/dev/null || true)"
   fi
   if [ -n "$ts" ]; then echo "$(( ($(date '+%s') - ts) / 86400 ))"; else echo "?"; fi
+}
+
+# Minutes since an ISO-8601 timestamp (as written by _sync_state), "?" if unparseable.
+age_mins() {
+  local ts
+  if [ "$DOTFILES_OS" = "macos" ]; then
+    ts="$(date -j -f '%Y-%m-%dT%H:%M:%S%z' "$1" '+%s' 2>/dev/null || true)"
+  else
+    ts="$(date -d "$1" '+%s' 2>/dev/null || true)"
+  fi
+  if [ -n "$ts" ]; then echo "$(( ($(date '+%s') - ts) / 60 ))"; else echo "?"; fi
 }
 
 cmd_status() {
@@ -283,8 +399,8 @@ cmd_status() {
     apt_upgradable) out_label="apt package(s) upgradable" ;;
   esac
 
-  local sync_line=""
-  [ -f "$state/last-sync" ] && read -r sync_line < "$state/last-sync" || true
+  local sync_ts="" sync_status="" sync_detail=""
+  [ -f "$state/last-sync" ] && read -r sync_ts sync_status sync_detail < "$state/last-sync" || true
 
   # --- classify; red-class lines bypass the MOTD debounce ---
   # Staleness by ISO date string compare against the 3-days-ago cutoff
@@ -302,11 +418,22 @@ cmd_status() {
     red_stale="last upgrade $up_day (>3 days ago) — run: dotfiles upgrade"
   fi
 
+  # Sync states: conflict/reverted/broken/failed are red-class (bypass the
+  # MOTD debounce); blocked/offline/skipped informational; ok stays quiet.
+  local red_sync="" yellow_sync=""
+  case "$sync_status" in
+    conflict) red_sync="sync conflict: $sync_detail — resolve in $DOTFILES_DIR, then: dotfiles sync" ;;
+    reverted) red_sync="sync auto-reverted: $sync_detail — git checkout main, fix, push" ;;
+    broken)   red_sync="sync: $sync_detail — see docs/RECOVERY.md" ;;
+    failed)   red_sync="sync failed: $sync_detail" ;;
+    blocked|offline|skipped) yellow_sync="sync $sync_status: $sync_detail" ;;
+  esac
+
   if [ "$motd" -eq 1 ]; then
     # Daily debounce: all-green and already shown today → stay silent.
     local shown=""
     [ -f "$state/motd-shown" ] && read -r shown < "$state/motd-shown" || true
-    if [ "$shown" = "$today" ] && [ -z "$red_failed$red_stale" ]; then
+    if [ "$shown" = "$today" ] && [ -z "$red_failed$red_stale$red_sync" ]; then
       return 0
     fi
     # Best effort: an unwritable state dir must not break shell startup
@@ -323,10 +450,11 @@ cmd_status() {
     printf 'Good morning, %s.\n' "${USER:-$(id -un)}"
     [ -n "$red_failed" ] && red "$red_failed"
     [ -n "$red_stale" ] && red "$red_stale"
+    [ -n "$red_sync" ] && red "$red_sync"
     if [ -n "$out_count" ] && [ "$out_count" -gt 0 ] 2>/dev/null; then
       yellow "$out_count $out_label — run: dotfiles upgrade"
     fi
-    [ -n "$sync_line" ] && yellow "sync: $sync_line"
+    [ -n "$yellow_sync" ] && yellow "$yellow_sync"
     return 0
   fi
 
@@ -348,10 +476,14 @@ cmd_status() {
   else
     green "outdated: none"
   fi
-  if [ -n "$sync_line" ]; then
-    green "sync: $sync_line"
+  if [ -z "$sync_status" ]; then
+    yellow "sync: no record — run: dotfiles sync"
+  elif [ -n "$red_sync" ]; then
+    red "$red_sync"
+  elif [ -n "$yellow_sync" ]; then
+    yellow "$yellow_sync"
   else
-    yellow "sync: not configured (M5)"
+    green "sync: synced $(age_mins "$sync_ts")m ago ($sync_detail)"
   fi
 }
 
@@ -404,10 +536,10 @@ Commands:
   apply     Stow all packages into ~ (restow-safe)
   doctor    Check health: tools, symlinks, default shell
   upgrade   Upgrade dependencies (--auto: unattended bucket only)
+  sync      Converge with origin: commit, pull --rebase, push, apply, smoke-test
+            (--auto: scheduled run — skips when files were edited recently)
   status    Show machine status (--motd: daily banner for shell startup)
   help      Show this help
-
-Coming in later milestones: sync (M5).
 EOF
 }
 
@@ -419,6 +551,7 @@ main() {
     apply)   cmd_apply "$@" ;;
     doctor)  cmd_doctor "$@" ;;
     upgrade) cmd_upgrade "$@" ;;
+    sync)    cmd_sync "$@" ;;
     status)  cmd_status "$@" ;;
     help|-h|--help) usage ;;
     *) red "unknown command: $cmd"; usage; exit 1 ;;
