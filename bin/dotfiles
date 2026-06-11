@@ -36,8 +36,18 @@ packages_for_host() {
 
 cmd_apply() {
   command -v stow >/dev/null || { red "GNU stow is not installed"; exit 1; }
-  local pkg
+  local pkg src rel target
   for pkg in $(packages_for_host); do
+    # Fresh machines ship skeleton files (.bashrc, .profile, ...); stow
+    # refuses to replace real files, so move obstructions aside first.
+    while IFS= read -r src; do
+      rel="${src#"$PACKAGES_DIR/$pkg/"}"
+      target="$HOME/$rel"
+      if { [ -e "$target" ] || [ -L "$target" ]; } && [ ! "$target" -ef "$src" ]; then
+        yellow "moved aside: ~/$rel -> ~/$rel.pre-stow"
+        mv "$target" "$target.pre-stow"
+      fi
+    done < <(find "$PACKAGES_DIR/$pkg" -type f)
     stow --no-folding -d "$PACKAGES_DIR" -t "$HOME" -R "$pkg"
     green "stowed $pkg"
   done
