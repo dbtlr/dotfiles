@@ -10,8 +10,8 @@ done
 source "$HOME/dotfiles/vendor/zsh-autosuggestions/zsh-autosuggestions.zsh"
 source "$HOME/dotfiles/vendor/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
 
-# Daily checks (replaced by dotfiles status --motd in M4)
-good_morning
+# Daily status banner (instant; reads state/ written by background jobs)
+command -v dotfiles >/dev/null && dotfiles status --motd
 
 # Prompt (cached init rendered by dotfiles apply/upgrade; eval only when missing)
 if [[ -r "$HOME/dotfiles/state/init/starship.zsh" ]]; then
