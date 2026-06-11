@@ -13,6 +13,7 @@ set -uo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SANDBOX="$(mktemp -d)"
 trap 'rm -rf "$SANDBOX"' EXIT
+trap 'exit 130' INT TERM   # route signals through the EXIT trap for cleanup
 
 # Never read the developer's git config (signing, hooks, templates...).
 # Exported, so the sync runs under test inherit it too.
@@ -200,7 +201,11 @@ run_sync "$B" "$HOME_B" DOTFILES_QUIET_MINS=0
 assert_eq "exit code 1" 1 "$SYNC_RC"
 assert_contains "last-sync records reverted" \
   " reverted bad commit $b_bad — reverted to $b_good; fix and push" "$(last_sync "$B")"
-assert_eq "B back at pre-pull commit (detached)" "$b_good" "$(git -C "$B" rev-parse HEAD)"
+assert_eq "B back at pre-pull commit" "$b_good" "$(git -C "$B" rev-parse HEAD)"
+assert_eq "B still on branch main (not detached)" \
+  "main" "$(git -C "$B" rev-parse --abbrev-ref HEAD)"
+assert_eq "quarantine file holds the bad sha" \
+  "$b_bad" "$(cat "$B/state/quarantine" 2>/dev/null)"
 assert_contains "smoke test exercised the FAKE home zshrc (marker in output)" \
   "BROKEN_ZSHRC_MARKER" "$SYNC_OUT"
 assert_contains "fake home zshrc content reverted to the good version" \
@@ -212,10 +217,9 @@ else
 fi
 
 # Recovery path (what the red MOTD line tells the user): fix on another host,
-# then checkout main + sync.
+# push; B un-quarantines on its next sync (no manual git on B needed).
 git -C "$A" revert --no-edit HEAD >/dev/null
 git -C "$A" push -q origin main
-git -C "$B" checkout -q main
 run_sync "$B" "$HOME_B" DOTFILES_QUIET_MINS=0
 assert_eq "recovery sync exit code 0" 0 "$SYNC_RC"
 assert_contains "recovery last-sync ok" " ok " "$(last_sync "$B")"
@@ -230,6 +234,154 @@ assert_eq "exit code 0 (offline is not an error)" 0 "$SYNC_RC"
 assert_contains "last-sync records offline" " offline fetch failed (offline?)" "$(last_sync "$B")"
 assert_eq "B HEAD unchanged" "$b_head" "$(git -C "$B" rev-parse HEAD)"
 mv "$ORIGIN.offline" "$ORIGIN"
+
+scenario "7: quarantine persists (second sync refuses to re-pull the bad commit)"
+git -C "$A" pull -q --rebase origin main
+cat > "$A/packages/shell/.zshrc" <<'EOF'
+# deliberately broken fixture zshrc (s7)
+echo "BROKEN_S7_MARKER" >&2
+exit 7
+EOF
+git -C "$A" commit -qam "s7: break zshrc"
+git -C "$A" push -q origin main
+b_good="$(git -C "$B" rev-parse HEAD)"
+b_bad="$(git -C "$A" rev-parse HEAD)"
+
+run_sync "$B" "$HOME_B" DOTFILES_QUIET_MINS=0     # first run: auto-revert
+assert_eq "revert run exit code 1" 1 "$SYNC_RC"
+assert_eq "B on branch main after revert" "main" "$(git -C "$B" rev-parse --abbrev-ref HEAD)"
+assert_eq "B main reset to the good commit" "$b_good" "$(git -C "$B" rev-parse HEAD)"
+assert_eq "quarantine file holds the bad sha" "$b_bad" "$(cat "$B/state/quarantine" 2>/dev/null)"
+
+backups_before="$(find "$HOME_B" -maxdepth 1 -name '.zshrc.backup-*' | wc -l | tr -d ' ')"
+run_sync "$B" "$HOME_B" DOTFILES_QUIET_MINS=0     # second run: quarantine blocks re-apply
+assert_eq "second run exit code 1" 1 "$SYNC_RC"
+assert_contains "last-sync re-asserts reverted/still-at-tip" \
+  " reverted bad commit $b_bad still at origin tip — fix and push" "$(last_sync "$B")"
+assert_eq "no re-pull: HEAD still the good commit" "$b_good" "$(git -C "$B" rev-parse HEAD)"
+assert_eq "still on main (not detached)" "main" "$(git -C "$B" rev-parse --abbrev-ref HEAD)"
+assert_contains "fake home zshrc still the good one (no re-apply)" \
+  "SANDBOX_ZSHRC=ok" "$(cat "$HOME_B/.zshrc")"
+backups_after="$(find "$HOME_B" -maxdepth 1 -name '.zshrc.backup-*' | wc -l | tr -d ' ')"
+assert_eq "no new backup files (no re-apply)" "$backups_before" "$backups_after"
+if [ -f "$B/state/quarantine" ]; then
+  pass "quarantine file still present"
+else
+  fail "quarantine file missing"
+fi
+case "$SYNC_OUT" in
+  *BROKEN_S7_MARKER*) fail "bad zshrc was re-applied (marker reached the smoke test)" ;;
+  *) pass "bad commit never re-applied (no marker in output)" ;;
+esac
+
+scenario "8: quarantine lifts when origin moves to a fix"
+git -C "$A" revert --no-edit HEAD >/dev/null
+git -C "$A" push -q origin main
+run_sync "$B" "$HOME_B" DOTFILES_QUIET_MINS=0
+assert_eq "exit code 0" 0 "$SYNC_RC"
+assert_eq "B converged to the fix" \
+  "$(git --git-dir="$ORIGIN" rev-parse main)" "$(git -C "$B" rev-parse HEAD)"
+if [ ! -e "$B/state/quarantine" ]; then
+  pass "quarantine file removed"
+else
+  fail "quarantine file still present"
+fi
+assert_eq "on main" "main" "$(git -C "$B" rev-parse --abbrev-ref HEAD)"
+assert_contains "last-sync ok+applied" " ok pulled" "$(last_sync "$B")"
+assert_contains "fake home zshrc back to good content" \
+  "SANDBOX_ZSHRC=ok" "$(cat "$HOME_B/.zshrc")"
+
+scenario "9: local commits during quarantine survive, then propagate after the fix"
+git -C "$A" pull -q --rebase origin main
+cat > "$A/packages/shell/.zshrc" <<'EOF'
+# deliberately broken fixture zshrc (s9)
+echo "BROKEN_S9_MARKER" >&2
+exit 7
+EOF
+git -C "$A" commit -qam "s9: break zshrc"
+git -C "$A" push -q origin main
+s9_bad="$(git -C "$A" rev-parse HEAD)"
+run_sync "$B" "$HOME_B" DOTFILES_QUIET_MINS=0     # enter quarantine
+assert_eq "revert run exit code 1" 1 "$SYNC_RC"
+assert_eq "quarantine active" "$s9_bad" "$(cat "$B/state/quarantine" 2>/dev/null)"
+
+# Local edit while quarantined: commits to local main, is NOT pushed yet.
+printf 'alias sandbox_s9=true\n' >> "$B/packages/shell/.zshrc"
+run_sync "$B" "$HOME_B" DOTFILES_QUIET_MINS=0
+assert_eq "exit code 1 (still quarantined)" 1 "$SYNC_RC"
+assert_contains "local edit auto-committed" "auto(" "$(git -C "$B" log -1 --format=%s)"
+assert_eq "commit landed on main" "main" "$(git -C "$B" rev-parse --abbrev-ref HEAD)"
+assert_contains "push deferred message (not the offline lie)" \
+  "push deferred (quarantine active)" "$SYNC_OUT"
+assert_contains "state re-asserts reverted (not ok-lying)" \
+  " reverted bad commit $s9_bad still at origin tip" "$(last_sync "$B")"
+assert_eq "origin tip still the bad commit (nothing pushed)" \
+  "$s9_bad" "$(git --git-dir="$ORIGIN" rev-parse main)"
+
+# Fix pushed from A lifts quarantine; B's local commit rebases onto it + pushes.
+git -C "$A" revert --no-edit HEAD >/dev/null
+git -C "$A" push -q origin main
+run_sync "$B" "$HOME_B" DOTFILES_QUIET_MINS=0
+assert_eq "post-fix sync exit code 0" 0 "$SYNC_RC"
+if [ ! -e "$B/state/quarantine" ]; then
+  pass "quarantine lifted"
+else
+  fail "quarantine still present"
+fi
+assert_contains "last-sync ok" " ok " "$(last_sync "$B")"
+assert_eq "quarantine-era commit pushed (origin == B HEAD)" \
+  "$(git -C "$B" rev-parse HEAD)" "$(git --git-dir="$ORIGIN" rev-parse main)"
+assert_contains "B's live zshrc has both the fix and the local edit" \
+  "sandbox_s9" "$(cat "$HOME_B/.zshrc")"
+git -C "$A" pull -q --rebase origin main
+assert_contains "A pulled back B's quarantine-era edit (end-to-end)" \
+  "sandbox_s9" "$(cat "$A/packages/shell/.zshrc")"
+
+scenario "10: untested local commit is blocked (smoke fails -> nothing pushed)"
+origin_before="$(git --git-dir="$ORIGIN" rev-parse main)"
+cat >> "$B/packages/shell/.zshrc" <<'EOF'
+echo "BROKEN_S10_MARKER" >&2
+exit 9
+EOF
+run_sync "$B" "$HOME_B" DOTFILES_QUIET_MINS=0
+assert_eq "exit code 1" 1 "$SYNC_RC"
+assert_contains "auto-commit was created" "auto(" "$(git -C "$B" log -1 --format=%s)"
+assert_contains "last-sync records failed/not-propagating" \
+  " failed local config fails smoke test — not propagating" "$(last_sync "$B")"
+assert_eq "origin tip UNCHANGED (nothing pushed)" \
+  "$origin_before" "$(git --git-dir="$ORIGIN" rev-parse main)"
+assert_contains "smoke exercised the broken live config" "BROKEN_S10_MARKER" "$SYNC_OUT"
+# Cleanup: drop the broken local commit (live config restored via symlink).
+git -C "$B" reset -q --hard origin/main
+
+scenario "11: cross-run lock (live pid skips, dead pid reclaims)"
+sleep 60 &
+lock_pid=$!
+mkdir -p "$B/state/run.lock"
+printf '%s\n' "$lock_pid" > "$B/state/run.lock/pid"
+state_before="$(last_sync "$B")"
+run_sync "$B" "$HOME_B" DOTFILES_QUIET_MINS=0
+assert_eq "lock held: exit code 0 (missed run is cheap)" 0 "$SYNC_RC"
+assert_contains "lock held: in-progress message" \
+  "another dotfiles run in progress (pid $lock_pid)" "$SYNC_OUT"
+assert_eq "lock held: last-sync untouched" "$state_before" "$(last_sync "$B")"
+if [ -d "$B/state/run.lock" ]; then
+  pass "foreign lock left in place"
+else
+  fail "foreign lock was removed"
+fi
+kill "$lock_pid" 2>/dev/null
+wait "$lock_pid" 2>/dev/null
+
+# Same lock dir, but its pid is now dead -> stale, reclaimed, run proceeds.
+run_sync "$B" "$HOME_B" DOTFILES_QUIET_MINS=0
+assert_eq "stale lock: exit code 0" 0 "$SYNC_RC"
+assert_contains "stale lock: sync actually ran" " ok " "$(last_sync "$B")"
+if [ ! -d "$B/state/run.lock" ]; then
+  pass "lock released after the run"
+else
+  fail "lock left behind"
+fi
 
 # ---------------------------------------------------------------- summary ---
 
