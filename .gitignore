@@ -14,3 +14,9 @@ lazy-lock.json
 *.local.zsh
 
 .claude/settings.local.json
+
+# Machine-local state (status files, logs, benchmarks)
+/state/
+
+# Specs and plans stay untracked (Drew's preference)
+docs/superpowers/

@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Benchmarks interactive zsh startup with hyperfine.
+# Writes JSON results to state/ (gitignored) and prints the summary.
+set -euo pipefail
+
+DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+command -v hyperfine >/dev/null || {
+  echo "hyperfine required (brew install hyperfine / apt install hyperfine)" >&2
+  exit 1
+}
+
+mkdir -p "$DOTFILES_DIR/state"
+out="$DOTFILES_DIR/state/zsh-bench-$(date +%Y%m%d-%H%M%S).json"
+
+hyperfine --warmup 2 --runs 10 --export-json "$out" 'zsh -ic "exit 0"'
+echo "Results saved to $out"

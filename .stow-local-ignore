@@ -5,3 +5,6 @@ install\.sh
 Brewfile
 agents
 \.claude
+bin
+docs
+state
