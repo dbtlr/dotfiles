@@ -12,7 +12,6 @@ htop
 btop
 bat
 fd-find
-fzf
 ripgrep
 zoxide
 eza
