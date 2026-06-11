@@ -74,7 +74,8 @@ render_starship() {
     else
       cat "$src/base.toml"
     fi
-  } > "$out"
+  } > "$out.tmp"
+  mv "$out.tmp" "$out"   # atomic: never leave a truncated live prompt config
   green "rendered starship.toml ($([ -f "$frag" ] && echo "$host palette" || echo 'base only'))"
 }
 
@@ -83,8 +84,14 @@ render_init_cache() {
   mkdir -p "$dir"
   # Each cache = captured output of an init eval. Shell modules source these
   # and only fork the real tool when the cache is missing.
+  # Known tradeoff: caches embed resolved binary paths (e.g. starship via mise
+  # on Linux), so an out-of-band `mise upgrade`/`mise uninstall` can leave them
+  # stale until the next `dotfiles apply` or `dotfiles upgrade` regenerates
+  # them (the dotfiles-managed flow always regenerates).
   if command -v brew >/dev/null; then
     brew shellenv zsh > "$dir/brew.zsh" 2>/dev/null || rm -f "$dir/brew.zsh"
+  else
+    rm -f "$dir/brew.zsh"
   fi
   if command -v mise >/dev/null; then
     # `mise activate` emits a verbatim snapshot of the generating PATH
@@ -93,12 +100,18 @@ render_init_cache() {
     # hook manages PATH dynamically.
     mise activate zsh 2>/dev/null | grep -v '^export PATH=' > "$dir/mise.zsh" \
       || rm -f "$dir/mise.zsh"
+  else
+    rm -f "$dir/mise.zsh"
   fi
   if command -v zoxide >/dev/null; then
     zoxide init zsh > "$dir/zoxide.zsh" 2>/dev/null || rm -f "$dir/zoxide.zsh"
+  else
+    rm -f "$dir/zoxide.zsh"
   fi
   if command -v starship >/dev/null; then
     starship init zsh --print-full-init > "$dir/starship.zsh" 2>/dev/null || rm -f "$dir/starship.zsh"
+  else
+    rm -f "$dir/starship.zsh"
   fi
   green "rendered init caches"
 }
@@ -260,18 +273,18 @@ cmd_status() {
 
   # --- read state (pure file reads; written by upgrade/sync) ---
   local up_date="" up_result="" up_day=""
-  [ -f "$state/last-upgrade" ] && read -r up_date up_result < "$state/last-upgrade"
+  [ -f "$state/last-upgrade" ] && read -r up_date up_result < "$state/last-upgrade" || true
   up_day="${up_date:0:10}"
 
   local out_label="" out_count=""
-  [ -f "$state/outdated" ] && IFS='=' read -r out_label out_count < "$state/outdated"
+  [ -f "$state/outdated" ] && IFS='=' read -r out_label out_count < "$state/outdated" || true
   case "$out_label" in
     casks_outdated) out_label="cask(s) outdated" ;;
     apt_upgradable) out_label="apt package(s) upgradable" ;;
   esac
 
   local sync_line=""
-  [ -f "$state/last-sync" ] && read -r sync_line < "$state/last-sync"
+  [ -f "$state/last-sync" ] && read -r sync_line < "$state/last-sync" || true
 
   # --- classify; red-class lines bypass the MOTD debounce ---
   # Staleness by ISO date string compare against the 3-days-ago cutoff
@@ -292,12 +305,13 @@ cmd_status() {
   if [ "$motd" -eq 1 ]; then
     # Daily debounce: all-green and already shown today → stay silent.
     local shown=""
-    [ -f "$state/motd-shown" ] && read -r shown < "$state/motd-shown"
+    [ -f "$state/motd-shown" ] && read -r shown < "$state/motd-shown" || true
     if [ "$shown" = "$today" ] && [ -z "$red_failed$red_stale" ]; then
       return 0
     fi
-    mkdir -p "$state"
-    printf '%s\n' "$today" > "$state/motd-shown"
+    # Best effort: an unwritable state dir must not break shell startup
+    # (the banner just repeats until the dir is writable again).
+    { mkdir -p "$state" && printf '%s\n' "$today" > "$state/motd-shown"; } 2>/dev/null || true
 
     local accent='\033[0m'
     case "$host" in
