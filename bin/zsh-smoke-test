@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# Verifies an interactive zsh starts and exits cleanly. Exits 0 on success.
+# Watchdog is hand-rolled because macOS has no GNU `timeout`.
+set -uo pipefail
+
+TIMEOUT_SECS="${1:-60}"
+ERRLOG="$(mktemp)"
+trap 'rm -f "$ERRLOG"' EXIT
+
+zsh -ic 'exit 0' </dev/null >/dev/null 2>"$ERRLOG" &
+pid=$!
+
+elapsed=0
+while kill -0 "$pid" 2>/dev/null; do
+  if [ "$elapsed" -ge "$TIMEOUT_SECS" ]; then
+    kill -9 "$pid" 2>/dev/null
+    echo "FAIL: interactive zsh did not exit within ${TIMEOUT_SECS}s (hung startup?)" >&2
+    exit 1
+  fi
+  sleep 1
+  elapsed=$((elapsed + 1))
+done
+
+if wait "$pid"; then
+  echo "PASS: interactive zsh starts and exits cleanly"
+  exit 0
+else
+  rc=$?
+  echo "FAIL: interactive zsh exited with status $rc. stderr:" >&2
+  cat "$ERRLOG" >&2
+  exit "$rc"
+fi
