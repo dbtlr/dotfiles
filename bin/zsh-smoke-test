@@ -10,7 +10,7 @@ esac
 ERRLOG="$(mktemp)"
 trap 'rm -f "$ERRLOG"' EXIT
 
-zsh -ic 'exit 0' </dev/null >/dev/null 2>"$ERRLOG" &
+env -u TMUX zsh -ic 'exit 0' </dev/null >/dev/null 2>"$ERRLOG" &
 pid=$!
 
 elapsed=0

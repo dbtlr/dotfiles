@@ -12,7 +12,7 @@ case ":$PATH:" in
 esac
 
 # bun
-[[ -d "/home/data/.cache" ]] && export BUN_INSTALL_CACHE_DIR="/home/data/.cache/bun"
+[[ "$DOTFILES_OS" == "linux" && -d "/home/data/.cache" ]] && export BUN_INSTALL_CACHE_DIR="/home/data/.cache/bun"
 [[ -s "$HOME/.bun/_bun" ]] && source "$HOME/.bun/_bun"
 
 # rust

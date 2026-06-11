@@ -48,6 +48,14 @@ cmd_doctor() {
     fi
   done
 
+  # Vendored plugins present? (submodules need init after a plain clone)
+  if [ -f "$DOTFILES_DIR/vendor/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ]; then
+    green "vendor submodules initialized"
+  else
+    red "vendor submodules missing (run: dotfiles install)"
+    failures=$((failures + 1))
+  fi
+
   # 2. Every file in every host package is correctly symlinked into ~
   local pkg src rel target missing
   for pkg in $(packages_for_host); do

@@ -2,11 +2,16 @@
 fpath=("$HOME/dotfiles/vendor/zsh-completions/src" $fpath)
 
 autoload -Uz compinit
-if [[ -n ~/.zcompdump(#qN.mh+24) ]]; then
-  compinit          # dump older than 24h (or missing): full rescan
-else
-  compinit -C       # fresh dump: skip the expensive security scan
-fi
+() {
+  setopt local_options extended_glob
+  local zcd="$HOME/.zcompdump"
+  if [[ -n $zcd(#qN.mh-24) ]]; then
+    compinit -C -d "$zcd"   # dump fresher than 24h: skip the security scan
+  else
+    compinit -d "$zcd"      # missing or stale: full scan, then refresh mtime
+    touch "$zcd"
+  fi
+}
 
 zmodload zsh/complist
 zstyle ':completion:*' menu select
