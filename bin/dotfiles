@@ -104,6 +104,61 @@ cmd_doctor() {
   fi
 }
 
+cmd_upgrade() {
+  local auto=0
+  [ "${1:-}" = "--auto" ] && auto=1
+  mkdir -p "$DOTFILES_DIR/state"
+  local failures=0
+
+  # --- Auto bucket (no sudo, safe unattended) ---
+
+  if command -v mise >/dev/null; then
+    mise self-update -y >/dev/null 2>&1 || true   # no-op when not self-managed
+    if mise upgrade; then green "mise tools upgraded"; else red "mise upgrade failed"; failures=$((failures+1)); fi
+  fi
+
+  if git -C "$DOTFILES_DIR" submodule update --remote --depth 1; then
+    green "vendor plugins updated"
+  else
+    red "vendor plugin update failed"; failures=$((failures+1))
+  fi
+
+  if [ "$DOTFILES_OS" = "macos" ]; then
+    if brew update >/dev/null 2>&1 && brew upgrade --formula; then
+      green "brew formulae upgraded"
+    else
+      red "brew formula upgrade failed"; failures=$((failures+1))
+    fi
+    local casks
+    casks="$(brew outdated --cask --quiet 2>/dev/null | grep -c . || true)"
+    if [ "$auto" -eq 1 ]; then
+      [ "$casks" -gt 0 ] && yellow "$casks cask(s) outdated — run: dotfiles upgrade"
+    else
+      # --- Manual bucket: casks ---
+      if [ "$casks" -gt 0 ]; then brew upgrade --cask && casks=0; fi
+      green "casks up to date"
+    fi
+    printf 'casks_outdated=%s\n' "$casks" > "$DOTFILES_DIR/state/outdated"
+  else
+    local debs
+    debs="$(apt-get -s upgrade 2>/dev/null | grep -c '^Inst' || true)"
+    if [ "$auto" -eq 1 ]; then
+      [ "$debs" -gt 0 ] && yellow "$debs apt package(s) upgradable — run: dotfiles upgrade"
+    else
+      # --- Manual bucket: apt (interactive sudo) ---
+      sudo apt-get update
+      sudo apt-get upgrade -y
+      debs=0
+      green "apt packages upgraded"
+    fi
+    printf 'apt_upgradable=%s\n' "$debs" > "$DOTFILES_DIR/state/outdated"
+  fi
+
+  printf '%s %s\n' "$(date '+%Y-%m-%dT%H:%M:%S')" "$([ "$failures" -eq 0 ] && echo ok || echo "failed=$failures")" \
+    > "$DOTFILES_DIR/state/last-upgrade"
+  [ "$failures" -eq 0 ]
+}
+
 cmd_install() {
   # mise's installer puts the binary in ~/.local/bin; install needs it on PATH
   # before any shell restart picks it up.
@@ -117,12 +172,8 @@ cmd_install() {
     fi
     brew bundle --file="$DOTFILES_DIR/manifests/Brewfile"
   else
-    # Full apt manifest support lands in M3; bootstrap essentials only.
-    yellow "Linux: apt manifest support lands in M3; installing essentials"
-    if ! command -v stow >/dev/null || ! command -v zsh >/dev/null; then
-      sudo apt-get update
-      sudo apt-get install -y stow zsh git curl
-    fi
+    sudo apt-get update
+    grep -vE '^\s*(#|$)' "$DOTFILES_DIR/manifests/apt-packages.txt" | xargs sudo apt-get install -y
   fi
 
   cmd_apply
@@ -160,9 +211,10 @@ Commands:
   install   Bootstrap dependencies and stow packages (idempotent)
   apply     Stow all packages into ~ (restow-safe)
   doctor    Check health: tools, symlinks, default shell
+  upgrade   Upgrade dependencies (--auto: unattended bucket only)
   help      Show this help
 
-Coming in later milestones: upgrade (M3), status/motd (M4), sync (M5).
+Coming in later milestones: status/motd (M4), sync (M5).
 EOF
 }
 
@@ -173,6 +225,7 @@ main() {
     install) cmd_install "$@" ;;
     apply)   cmd_apply "$@" ;;
     doctor)  cmd_doctor "$@" ;;
+    upgrade) cmd_upgrade "$@" ;;
     help|-h|--help) usage ;;
     *) red "unknown command: $cmd"; usage; exit 1 ;;
   esac
