@@ -6,6 +6,12 @@ set -euo pipefail
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PACKAGES_DIR="$DOTFILES_DIR/packages"
 
+# mise lives in ~/.local/bin and exposes its tools via shims. This script runs
+# in plain bash (no `mise activate`), so put both on PATH up front: install
+# needs the mise binary, doctor/upgrade need to see mise-managed tools
+# (e.g. starship on Linux) the same way an interactive shell does.
+export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
+
 case "$(uname -s)" in
   Darwin) DOTFILES_OS="macos" ;;
   Linux)  DOTFILES_OS="linux" ;;
@@ -160,10 +166,6 @@ cmd_upgrade() {
 }
 
 cmd_install() {
-  # mise's installer puts the binary in ~/.local/bin; install needs it on PATH
-  # before any shell restart picks it up.
-  export PATH="$HOME/.local/bin:$PATH"
-
   if [ "$DOTFILES_OS" = "macos" ]; then
     if ! command -v brew >/dev/null; then
       yellow "Installing Homebrew..."
