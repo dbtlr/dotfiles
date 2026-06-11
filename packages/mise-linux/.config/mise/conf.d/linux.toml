@@ -1,0 +1,6 @@
+# Linux-only tools not available (or too old) in Ubuntu apt.
+# Lives in conf.d so the main config.toml stays shared across all hosts.
+[tools]
+starship = "latest"
+# noble ships fzf 0.44; `fzf --zsh` (used by ~/.fzf.zsh) needs >= 0.48
+fzf = "latest"
