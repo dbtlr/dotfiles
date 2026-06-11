@@ -1,0 +1,11 @@
+# Managed by dotfiles (schedulers/systemd/) — installed to
+# ~/.config/systemd/user/ by `dotfiles install`.
+[Unit]
+Description=Run dotfiles upgrade daily at 06:30
+
+[Timer]
+OnCalendar=06:30
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,10 @@
+# Managed by dotfiles (schedulers/systemd/) — installed to
+# ~/.config/systemd/user/ by `dotfiles install`.
+[Unit]
+Description=dotfiles sync (converge with origin)
+
+[Service]
+Type=oneshot
+ExecStart=%h/dotfiles/bin/dotfiles sync --auto
+StandardOutput=append:%h/dotfiles/state/log/sync.log
+StandardError=append:%h/dotfiles/state/log/sync.log

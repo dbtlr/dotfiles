@@ -1,0 +1,10 @@
+# Managed by dotfiles (schedulers/systemd/) — installed to
+# ~/.config/systemd/user/ by `dotfiles install`.
+[Unit]
+Description=dotfiles upgrade (unattended bucket)
+
+[Service]
+Type=oneshot
+ExecStart=%h/dotfiles/bin/dotfiles upgrade --auto
+StandardOutput=append:%h/dotfiles/state/log/upgrade.log
+StandardError=append:%h/dotfiles/state/log/upgrade.log

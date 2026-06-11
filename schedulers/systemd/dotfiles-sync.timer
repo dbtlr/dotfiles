@@ -1,0 +1,11 @@
+# Managed by dotfiles (schedulers/systemd/) — installed to
+# ~/.config/systemd/user/ by `dotfiles install`.
+[Unit]
+Description=Run dotfiles sync every 30 minutes
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=30min
+
+[Install]
+WantedBy=timers.target

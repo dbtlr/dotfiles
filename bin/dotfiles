@@ -177,6 +177,48 @@ cmd_doctor() {
     *)    yellow "default shell is not zsh (${SHELL:-unset})" ;;
   esac
 
+  # 5. Schedulers. Neither loaded is a valid state (pre-enablement: the
+  # install key-turn hasn't happened) — yellow. Exactly one loaded means a
+  # half-configured machine — red.
+  local sched_loaded=0 sched_missing="" unit
+  if [ "$DOTFILES_OS" = "macos" ]; then
+    for unit in com.dbtlr.dotfiles.sync com.dbtlr.dotfiles.upgrade; do
+      if launchctl print "gui/$(id -u)/$unit" >/dev/null 2>&1; then
+        sched_loaded=$((sched_loaded + 1))
+      else
+        sched_missing="$sched_missing $unit"
+      fi
+    done
+  elif [ "$DOTFILES_OS" = "linux" ]; then
+    for unit in dotfiles-sync.timer dotfiles-upgrade.timer; do
+      if systemctl --user is-enabled "$unit" >/dev/null 2>&1; then
+        sched_loaded=$((sched_loaded + 1))
+      else
+        sched_missing="$sched_missing $unit"
+      fi
+    done
+  fi
+  if [ "$DOTFILES_OS" != "unknown" ]; then
+    if [ "$sched_loaded" -eq 2 ]; then
+      green "schedulers loaded (sync + upgrade)"
+    elif [ "$sched_loaded" -eq 0 ]; then
+      yellow "schedulers not enabled (run: dotfiles install when ready to enable)"
+    else
+      red "schedulers half-configured: missing$sched_missing (run: dotfiles install)"
+      failures=$((failures + 1))
+    fi
+  fi
+
+  # 6. Scheduler logs growing unbounded (no rotation by design — just warn)
+  local log size
+  for log in "$DOTFILES_DIR"/state/log/*.log; do
+    [ -f "$log" ] || continue
+    size="$(wc -c < "$log" | tr -d '[:space:]')"
+    if [ "$size" -gt 1048576 ]; then
+      yellow "$(basename "$log") is $((size / 1024))KB (>1MB) — truncate with: : > $log"
+    fi
+  done
+
   if [ "$failures" -eq 0 ]; then
     green "doctor: all checks passed"
   else
@@ -490,6 +532,38 @@ cmd_status() {
   fi
 }
 
+# Render + load the OS scheduler jobs (launchd agents / systemd user timers).
+# ONLY cmd_install calls this: enabling a timed auto-commit of the working
+# tree is a conscious key-turn, never a side effect of apply/sync/doctor.
+install_schedulers() {
+  mkdir -p "$DOTFILES_DIR/state/log"
+  if [ "$DOTFILES_OS" = "macos" ]; then
+    local label dest
+    mkdir -p "$HOME/Library/LaunchAgents"
+    for label in com.dbtlr.dotfiles.sync com.dbtlr.dotfiles.upgrade; do
+      dest="$HOME/Library/LaunchAgents/$label.plist"
+      sed "s|__HOME__|$HOME|g" "$DOTFILES_DIR/schedulers/launchd/$label.plist" > "$dest"
+      # Idempotent reload: bootout is a no-op (ignored) when not loaded.
+      launchctl bootout "gui/$(id -u)/$label" 2>/dev/null || true
+      launchctl bootstrap "gui/$(id -u)" "$dest"
+      green "launchd agent loaded: $label"
+    done
+  elif [ "$DOTFILES_OS" = "linux" ]; then
+    mkdir -p "$HOME/.config/systemd/user"
+    cp "$DOTFILES_DIR/schedulers/systemd/dotfiles-sync.service" \
+       "$DOTFILES_DIR/schedulers/systemd/dotfiles-sync.timer" \
+       "$DOTFILES_DIR/schedulers/systemd/dotfiles-upgrade.service" \
+       "$DOTFILES_DIR/schedulers/systemd/dotfiles-upgrade.timer" \
+       "$HOME/.config/systemd/user/"
+    systemctl --user daemon-reload
+    systemctl --user enable --now dotfiles-sync.timer dotfiles-upgrade.timer
+    # Headless server: user timers stop at logout unless the user lingers.
+    loginctl enable-linger "$USER" 2>/dev/null \
+      || yellow "could not enable lingering — timers stop at logout (run: sudo loginctl enable-linger $USER)"
+    green "systemd user timers enabled: dotfiles-sync, dotfiles-upgrade"
+  fi
+}
+
 cmd_install() {
   if [ "$DOTFILES_OS" = "macos" ]; then
     if ! command -v brew >/dev/null; then
@@ -524,6 +598,8 @@ cmd_install() {
       || sudo chsh -s "$zsh_path" "$USER" \
       || yellow "Could not change shell automatically; run: chsh -s $zsh_path"
   fi
+
+  install_schedulers
 
   green "install complete — restart your shell or run: exec zsh"
 }
