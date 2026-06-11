@@ -268,6 +268,9 @@ _sync_state() {  # _sync_state <status> <detail...>
 
 _recently_edited() {
   # Any tracked-or-untracked (non-ignored) file modified within the quiet period?
+  # 0 disables the guard entirely (BSD find treats `-mmin -0` as matching
+  # fresh files, so don't let it near find).
+  if [ "$QUIET_PERIOD_MINS" -le 0 ] 2>/dev/null; then return 1; fi
   local f
   while IFS= read -r f; do
     [ -f "$DOTFILES_DIR/$f" ] || continue
@@ -423,7 +426,7 @@ cmd_status() {
   local red_sync="" yellow_sync=""
   case "$sync_status" in
     conflict) red_sync="sync conflict: $sync_detail — resolve in $DOTFILES_DIR, then: dotfiles sync" ;;
-    reverted) red_sync="sync auto-reverted: $sync_detail — git checkout main, fix, push" ;;
+    reverted) red_sync="sync auto-reverted: $sync_detail (recover: git checkout main, fix, push)" ;;
     broken)   red_sync="sync: $sync_detail — see docs/RECOVERY.md" ;;
     failed)   red_sync="sync failed: $sync_detail" ;;
     blocked|offline|skipped) yellow_sync="sync $sync_status: $sync_detail" ;;
