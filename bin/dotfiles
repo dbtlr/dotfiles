@@ -54,6 +54,7 @@ cmd_apply() {
     green "stowed $pkg"
   done
   render_starship
+  render_init_cache
 }
 
 render_starship() {
@@ -75,6 +76,31 @@ render_starship() {
     fi
   } > "$out"
   green "rendered starship.toml ($([ -f "$frag" ] && echo "$host palette" || echo 'base only'))"
+}
+
+render_init_cache() {
+  local dir="$DOTFILES_DIR/state/init"
+  mkdir -p "$dir"
+  # Each cache = captured output of an init eval. Shell modules source these
+  # and only fork the real tool when the cache is missing.
+  if command -v brew >/dev/null; then
+    brew shellenv zsh > "$dir/brew.zsh" 2>/dev/null || rm -f "$dir/brew.zsh"
+  fi
+  if command -v mise >/dev/null; then
+    # `mise activate` emits a verbatim snapshot of the generating PATH
+    # (export PATH='…') — a no-op when eval'd live, but it would clobber the
+    # interactive shell's PATH when sourced from cache. Strip it; the precmd
+    # hook manages PATH dynamically.
+    mise activate zsh 2>/dev/null | grep -v '^export PATH=' > "$dir/mise.zsh" \
+      || rm -f "$dir/mise.zsh"
+  fi
+  if command -v zoxide >/dev/null; then
+    zoxide init zsh > "$dir/zoxide.zsh" 2>/dev/null || rm -f "$dir/zoxide.zsh"
+  fi
+  if command -v starship >/dev/null; then
+    starship init zsh --print-full-init > "$dir/starship.zsh" 2>/dev/null || rm -f "$dir/starship.zsh"
+  fi
+  green "rendered init caches"
 }
 
 cmd_doctor() {
@@ -206,6 +232,10 @@ cmd_upgrade() {
 
   printf '%s %s\n' "$(date '+%Y-%m-%dT%H:%M:%S%z')" "$([ "$failures" -eq 0 ] && echo ok || echo "failed=$failures")" \
     > "$DOTFILES_DIR/state/last-upgrade"
+
+  # Upgrades can change tool init scripts — refresh the cached evals.
+  render_init_cache
+
   [ "$failures" -eq 0 ] && return 0 || return 1
 }
 

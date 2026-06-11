@@ -13,5 +13,9 @@ source "$HOME/dotfiles/vendor/zsh-syntax-highlighting/zsh-syntax-highlighting.zs
 # Daily checks (replaced by dotfiles status --motd in M4)
 good_morning
 
-# Prompt
-eval "$(starship init zsh)"
+# Prompt (cached init rendered by dotfiles apply/upgrade; eval only when missing)
+if [[ -r "$HOME/dotfiles/state/init/starship.zsh" ]]; then
+  source "$HOME/dotfiles/state/init/starship.zsh"
+else
+  eval "$(starship init zsh)"
+fi
