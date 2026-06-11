@@ -35,7 +35,6 @@ brew "hyperfine"
 brew "mosh"
 brew "tmux"
 brew "zellij"
-brew "powerlevel10k"
 brew "lazygit"
 brew "worktrunk"
 
