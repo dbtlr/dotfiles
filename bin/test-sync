@@ -383,6 +383,44 @@ else
   fail "lock left behind"
 fi
 
+scenario "12: run-2 propagation block (clean tree, unpushed broken commit stays gated)"
+origin_before="$(git --git-dir="$ORIGIN" rev-parse main)"
+cat >> "$B/packages/shell/.zshrc" <<'EOF'
+echo "BROKEN_S12_MARKER" >&2
+exit 9
+EOF
+run_sync "$B" "$HOME_B" DOTFILES_QUIET_MINS=0     # run 1: auto-commit, blocked
+assert_eq "run 1 exit code 1" 1 "$SYNC_RC"
+assert_contains "run 1 auto-commit created" "auto(" "$(git -C "$B" log -1 --format=%s)"
+assert_eq "run 1: tree clean (breakage is committed)" "" "$(git -C "$B" status --porcelain)"
+
+run_sync "$B" "$HOME_B" DOTFILES_QUIET_MINS=0     # run 2: clean tree, still ahead
+assert_eq "run 2 exit code 1 (clean tree does NOT slip past the gate)" 1 "$SYNC_RC"
+assert_contains "run 2 last-sync records failed/not-propagating (NOT ok)" \
+  " failed local config fails smoke test — not propagating" "$(last_sync "$B")"
+assert_eq "run 2: origin tip UNCHANGED (broken commit never pushed)" \
+  "$origin_before" "$(git --git-dir="$ORIGIN" rev-parse main)"
+assert_contains "run 2: smoke exercised the broken live config" \
+  "BROKEN_S12_MARKER" "$SYNC_OUT"
+
+# Fix the config with a new commit on top; the next sync must smoke-pass and
+# push BOTH commits (the blocked one and its fix).
+cat > "$B/packages/shell/.zshrc" <<'EOF'
+# sandbox zshrc (fixture) — must stay trivially valid
+export SANDBOX_ZSHRC=ok
+alias sandbox_s12=true
+EOF
+git -C "$B" commit -qam "s12: fix zshrc"
+run_sync "$B" "$HOME_B" DOTFILES_QUIET_MINS=0
+assert_eq "post-fix exit code 0" 0 "$SYNC_RC"
+assert_contains "post-fix last-sync ok" " ok " "$(last_sync "$B")"
+assert_eq "both commits pushed (origin == B HEAD)" \
+  "$(git -C "$B" rev-parse HEAD)" "$(git --git-dir="$ORIGIN" rev-parse main)"
+assert_eq "origin advanced by 2 commits" \
+  "2" "$(git -C "$B" rev-list --count "$origin_before"..HEAD)"
+assert_eq "nothing left unpushed" \
+  "0" "$(git -C "$B" rev-list --count origin/main..HEAD)"
+
 # ---------------------------------------------------------------- summary ---
 
 printf '\n\033[1m%d passed, %d failed\033[0m\n' "$PASS_COUNT" "$FAIL_COUNT"
