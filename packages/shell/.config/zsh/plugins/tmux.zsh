@@ -57,9 +57,10 @@ tsock() {
 }
 
 exit() {
+  local rc=$?
   if [ -n "$TMUX" ]; then
     tmux detach
   else
-    builtin exit "$@"
+    builtin exit "${1:-$rc}"
   fi
 }
