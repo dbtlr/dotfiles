@@ -187,7 +187,45 @@ cmd_doctor() {
     *)    yellow "default shell is not zsh (${SHELL:-unset})" ;;
   esac
 
-  # 5. Schedulers. Neither loaded is a valid state (pre-enablement: the
+  # 5. Legacy leftovers from the pre-rebuild setup
+  if [ -d "$HOME/.oh-my-zsh" ]; then
+    yellow "legacy oh-my-zsh directory remains (rm -rf ~/.oh-my-zsh)"
+  fi
+
+  # 6. Recovery escape hatch (~/.zshrc.fallback, see docs/RECOVERY.md):
+  # missing means no safety net; differing from the live zshrc means it
+  # predates proven changes and would recover to a stale config.
+  if [ ! -f "$HOME/.zshrc.fallback" ]; then
+    yellow "no ~/.zshrc.fallback — create one while the shell is healthy: cp -L ~/.zshrc ~/.zshrc.fallback"
+  elif [ -f "$HOME/.zshrc" ] && ! cmp -s "$HOME/.zshrc.fallback" "$HOME/.zshrc"; then
+    yellow "~/.zshrc.fallback is stale (differs from ~/.zshrc) — refresh after proven changes: cp -L ~/.zshrc ~/.zshrc.fallback"
+  else
+    green "fallback zshrc present and current"
+  fi
+
+  # 7. apply's moved-aside backups accumulating (each blocked stow target
+  # leaves a dated *.backup-* file; a few are normal, a pile means cruft)
+  local backups
+  backups="$({ find "$HOME" -maxdepth 1 -name '*.backup-*' 2>/dev/null;
+               find "$HOME/.config" -maxdepth 2 -name '*.backup-*' 2>/dev/null; } | wc -l | tr -d '[:space:]')"
+  if [ "$backups" -gt 5 ]; then
+    yellow "$backups *.backup-* files under ~ / ~/.config — review and delete the stale ones"
+  fi
+
+  # 8. Divergence from origin/main as of the LAST FETCH — informational,
+  # deliberately offline (sync owns fetching; doctor never touches the network)
+  local ahead behind
+  if git -C "$DOTFILES_DIR" rev-parse --verify -q origin/main >/dev/null 2>&1; then
+    ahead="$(git -C "$DOTFILES_DIR" rev-list --count origin/main..HEAD 2>/dev/null || echo '?')"
+    behind="$(git -C "$DOTFILES_DIR" rev-list --count HEAD..origin/main 2>/dev/null || echo '?')"
+    if [ "$ahead" = "0" ] && [ "$behind" = "0" ]; then
+      green "in sync with origin/main (as of last fetch)"
+    else
+      yellow "diverged from origin/main: ahead $ahead, behind $behind (as of last fetch — next sync converges)"
+    fi
+  fi
+
+  # 9. Schedulers. Neither loaded is a valid state (pre-enablement: the
   # install key-turn hasn't happened) — yellow. Exactly one loaded means a
   # half-configured machine — red.
   local sched_loaded=0 sched_missing="" unit
@@ -219,7 +257,7 @@ cmd_doctor() {
     fi
   fi
 
-  # 6. Rendered schedulers still pointing at the pre-rename binary (M6: the
+  # 10. Rendered schedulers still pointing at the pre-rename binary (M6: the
   # bin/dotfiles shim keeps them working, but they should be re-rendered).
   # Absent files are fine — pre-enablement, nothing rendered yet.
   local rendered
@@ -233,7 +271,8 @@ cmd_doctor() {
     fi
   done
 
-  # 7. Scheduler logs growing unbounded (no rotation by design — just warn)
+  # 11. Scheduler logs growing unbounded (sync/upgrade self-trim at 512KB;
+  # >1MB here means the self-trim isn't running — warn as the backstop)
   local log size
   for log in "$DOTFILES_DIR"/state/log/*.log; do
     [ -f "$log" ] || continue
@@ -259,6 +298,7 @@ cmd_upgrade() {
   # would race git and the init caches. Trap releases the lock on any exit.
   trap _run_exit_trap EXIT
   acquire_run_lock || return 0
+  trim_log upgrade
 
   mkdir -p "$DOTFILES_DIR/state"
   local failures=0
@@ -358,6 +398,21 @@ _run_exit_trap() {
   fi
 }
 
+# Keep scheduler logs bounded: launchd/systemd append forever, so each run
+# trims its own verb's log once it crosses 512KB (keeping the last 500 lines).
+# Truncate IN PLACE (cat > log, not mv): the scheduler holds an O_APPEND fd on
+# this very file for the current run's output — replacing the inode would
+# orphan it. Doctor's >1MB warning stays as the backstop.
+trim_log() {  # trim_log <sync|upgrade>
+  local log="$DOTFILES_DIR/state/log/$1.log" size
+  [ -f "$log" ] || return 0
+  size="$(wc -c < "$log" | tr -d '[:space:]')"
+  if [ "$size" -gt 524288 ]; then
+    tail -n 500 "$log" > "$log.tmp" && cat "$log.tmp" > "$log"
+    rm -f "$log.tmp"
+  fi
+}
+
 # Cross-run mutual exclusion for sync/upgrade (scheduler + manual overlap).
 # mkdir is the portable atomic primitive — flock(1) doesn't exist on macOS.
 # Returns 1 when another live run holds the lock (callers exit 0: a missed
@@ -410,6 +465,7 @@ cmd_sync() {
   trap _run_exit_trap EXIT
   acquire_run_lock || return 0
   _SYNC_ACTIVE=1
+  trim_log sync
 
   # 1. Guards
   if [ -e "$DOTFILES_DIR/.git/rebase-merge" ] || [ -e "$DOTFILES_DIR/.git/rebase-apply" ] || [ -f "$DOTFILES_DIR/.git/MERGE_HEAD" ]; then
