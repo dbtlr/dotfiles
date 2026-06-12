@@ -195,9 +195,11 @@ cmd_doctor() {
   # 6. Recovery escape hatch (~/.zshrc.fallback, see docs/RECOVERY.md):
   # missing means no safety net; differing from the live zshrc means it
   # predates proven changes and would recover to a stale config.
-  if [ ! -f "$HOME/.zshrc.fallback" ]; then
+  if [ ! -f "$HOME/.zshrc" ]; then
+    yellow "no ~/.zshrc (stow check will flag) — fallback comparison skipped"
+  elif [ ! -f "$HOME/.zshrc.fallback" ]; then
     yellow "no ~/.zshrc.fallback — create one while the shell is healthy: cp -L ~/.zshrc ~/.zshrc.fallback"
-  elif [ -f "$HOME/.zshrc" ] && ! cmp -s "$HOME/.zshrc.fallback" "$HOME/.zshrc"; then
+  elif ! cmp -s "$HOME/.zshrc.fallback" "$HOME/.zshrc"; then
     yellow "~/.zshrc.fallback is stale (differs from ~/.zshrc) — refresh after proven changes: cp -L ~/.zshrc ~/.zshrc.fallback"
   else
     green "fallback zshrc present and current"
@@ -206,8 +208,8 @@ cmd_doctor() {
   # 7. apply's moved-aside backups accumulating (each blocked stow target
   # leaves a dated *.backup-* file; a few are normal, a pile means cruft)
   local backups
-  backups="$({ find "$HOME" -maxdepth 1 -name '*.backup-*' 2>/dev/null;
-               find "$HOME/.config" -maxdepth 2 -name '*.backup-*' 2>/dev/null; } | wc -l | tr -d '[:space:]')"
+  backups="$({ find "$HOME" -maxdepth 1 -name '*.backup-*' 2>/dev/null || true;
+               find "$HOME/.config" -maxdepth 2 -name '*.backup-*' 2>/dev/null || true; } | wc -l | tr -d '[:space:]')"
   if [ "$backups" -gt 5 ]; then
     yellow "$backups *.backup-* files under ~ / ~/.config — review and delete the stale ones"
   fi
@@ -276,7 +278,8 @@ cmd_doctor() {
   local log size
   for log in "$DOTFILES_DIR"/state/log/*.log; do
     [ -f "$log" ] || continue
-    size="$(wc -c < "$log" | tr -d '[:space:]')"
+    size="$(wc -c < "$log" 2>/dev/null | tr -d '[:space:]' || true)"
+    size="${size:-0}"
     if [ "$size" -gt 1048576 ]; then
       yellow "$(basename "$log") is $((size / 1024))KB (>1MB) — truncate with: : > $log"
     fi
@@ -406,9 +409,12 @@ _run_exit_trap() {
 trim_log() {  # trim_log <sync|upgrade>
   local log="$DOTFILES_DIR/state/log/$1.log" size
   [ -f "$log" ] || return 0
-  size="$(wc -c < "$log" | tr -d '[:space:]')"
+  size="$(wc -c < "$log" 2>/dev/null | tr -d '[:space:]' || true)"
+  size="${size:-0}"
   if [ "$size" -gt 524288 ]; then
-    tail -n 500 "$log" > "$log.tmp" && cat "$log.tmp" > "$log"
+    if tail -n 500 "$log" > "$log.tmp" 2>/dev/null && cat "$log.tmp" > "$log" 2>/dev/null; then
+      :
+    fi
     rm -f "$log.tmp"
   fi
 }

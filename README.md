@@ -52,7 +52,7 @@ conflict/revert/broken) bypass the debounce and show every shell until fixed.
 
 ```
 bin/        dot (the CLI), dotfiles (shim), zsh-smoke-test, zsh-bench, test-sync
-packages/   stow packages: shell, git, nvim, tmux, starship, mise, bash, claude
+packages/   stow packages: shell, git, nvim, tmux, starship, mise, mise-linux (Linux only), bash, claude
 manifests/  Brewfile (macOS), apt-packages.txt + 50unattended-upgrades (Ubuntu)
 vendor/     zsh plugin submodules (autosuggestions, syntax-highlighting, completions)
 schedulers/ launchd plist + systemd unit templates, rendered/enabled by `dot install`
