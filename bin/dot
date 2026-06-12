@@ -31,6 +31,7 @@ packages_for_host() {
     pkg="$(basename "$d")"
     case "$pkg" in
       mise-linux) [ "$DOTFILES_OS" = "linux" ] || continue ;;
+      homebrew)   [ "$DOTFILES_OS" = "macos" ] || continue ;;
     esac
     echo "$pkg"
   done

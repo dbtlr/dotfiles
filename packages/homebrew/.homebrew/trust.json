@@ -1,0 +1,12 @@
+{
+  "trustedtaps": [
+    "oven-sh/bun"
+  ],
+  "trustedformulae": [
+    "anomalyco/tap/opencode",
+    "antoniorodr/memo/memo",
+    "openclaw/tap/gogcli",
+    "steipete/tap/remindctl",
+    "yakitrak/yakitrak/obsidian-cli"
+  ]
+}
