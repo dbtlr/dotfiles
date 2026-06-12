@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<!-- Template: __HOME__ is substituted by `dotfiles install` (install_schedulers)
+<!-- Template: __HOME__ is substituted by `dot install` (install_schedulers)
      when rendering into ~/Library/LaunchAgents/. -->
 <plist version="1.0">
 <dict>
@@ -8,7 +8,7 @@
 	<string>com.dbtlr.dotfiles.sync</string>
 	<key>ProgramArguments</key>
 	<array>
-		<string>__HOME__/dotfiles/bin/dotfiles</string>
+		<string>__HOME__/dotfiles/bin/dot</string>
 		<string>sync</string>
 		<string>--auto</string>
 	</array>

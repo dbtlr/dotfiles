@@ -1,5 +1,5 @@
 // Managed by dotfiles (manifests/50unattended-upgrades).
-// Installed by `dotfiles install` as
+// Installed by `dot install` as
 // /etc/apt/apt.conf.d/50unattended-upgrades-dotfiles — suffixed so the
 // distro's stock 50unattended-upgrades stays intact; this file sorts after
 // it and takes precedence.

@@ -1,5 +1,5 @@
 
-# Cached `zoxide init` (rendered by dotfiles apply/upgrade); eval only when missing
+# Cached `zoxide init` (rendered by dot apply/upgrade); eval only when missing
 if [[ -r "$HOME/dotfiles/state/init/zoxide.zsh" ]]; then
   source "$HOME/dotfiles/state/init/zoxide.zsh"
 elif command -v zoxide &> /dev/null; then

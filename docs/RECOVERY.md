@@ -35,7 +35,7 @@ the repo (below) over overwriting the symlink.
     git checkout <good-sha>         # or: git revert <bad-sha>
     bin/zsh-smoke-test              # must PASS before you walk away
 
-If stow links are in a bad state, re-apply them (M1+: `bin/dotfiles apply`;
+If stow links are in a bad state, re-apply them (M1+: `bin/dot apply`;
 pre-M1: `stow --no-folding -t ~ .` from the repo root).
 
 ## Verify before closing your session

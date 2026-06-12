@@ -11,9 +11,9 @@ source "$HOME/dotfiles/vendor/zsh-autosuggestions/zsh-autosuggestions.zsh"
 source "$HOME/dotfiles/vendor/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
 
 # Daily status banner (instant; reads state/ written by background jobs)
-command -v dotfiles >/dev/null && dotfiles status --motd
+command -v dot >/dev/null && dot status --motd
 
-# Prompt (cached init rendered by dotfiles apply/upgrade; eval only when missing)
+# Prompt (cached init rendered by dot apply/upgrade; eval only when missing)
 if [[ -r "$HOME/dotfiles/state/init/starship.zsh" ]]; then
   source "$HOME/dotfiles/state/init/starship.zsh"
 else

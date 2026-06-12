@@ -1,19 +1,19 @@
 # Dotfiles
 
-Personal dotfiles managed with [GNU Stow](https://www.gnu.org/software/stow/). Configs live as stow packages under `packages/`, and `bin/dotfiles` is the CLI that installs, applies, and checks them. A full rewrite of these configs comes in M6 — for now this is the same setup, restructured.
+Personal dotfiles managed with [GNU Stow](https://www.gnu.org/software/stow/). Configs live as stow packages under `packages/`, and `bin/dot` is the CLI that installs, applies, and checks them. A full rewrite of these configs comes in M6 — for now this is the same setup, restructured.
 
 ## Installation
 
 ```bash
 git clone --recurse-submodules https://github.com/dbtlr/dotfiles.git ~/dotfiles
-~/dotfiles/bin/dotfiles install
+~/dotfiles/bin/dot install
 ```
 
 ## Day-to-day
 
 ```bash
-dotfiles apply    # restow all packages into ~ (or use the dotsync alias)
-dotfiles doctor   # check tools, symlinks, and default shell
+dot apply    # restow all packages into ~ (or use the dotsync alias)
+dot doctor   # check tools, symlinks, and default shell
 ```
 
 ## asgard catch-up (when it's back online)
@@ -32,8 +32,8 @@ git pull
 [ -f .config/nvim/lazy-lock.json ] && mv .config/nvim/lazy-lock.json packages/nvim/.config/nvim/
 find .config -type d -empty -delete 2>/dev/null || true
 git submodule update --init --depth 1
-bin/dotfiles install                     # apt manifest + unattended-upgrades + mise + schedulers
-bin/dotfiles doctor
+bin/dot install                     # apt manifest + unattended-upgrades + mise + schedulers
+bin/dot doctor
 bin/zsh-smoke-test
 rm -rf ~/.oh-my-zsh
 cp -L ~/.zshrc ~/.zshrc.fallback         # refresh the escape hatch

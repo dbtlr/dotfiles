@@ -1,5 +1,5 @@
-# Dotfiles management — thin wrappers over the dotfiles CLI (bin/dotfiles).
-dotsync() { "$HOME/dotfiles/bin/dotfiles" apply; }
+# Dotfiles management — thin wrappers over the dot CLI (bin/dot).
+dotsync() { "$HOME/dotfiles/bin/dot" apply; }
 
 dotunsync() {
   local pkgdir="$HOME/dotfiles/packages" pkg

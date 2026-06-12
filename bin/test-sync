@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
-# Integration tests for `dotfiles sync` against throwaway local git fixtures.
+# Integration tests for `dot sync` against throwaway local git fixtures.
 #
 # Builds a sandbox in mktemp -d: bare origin.git + two clones (A "valhalla",
 # B "other host"), each a minimal-but-real dotfiles repo (this repo's
-# bin/dotfiles + bin/zsh-smoke-test, a tiny packages/shell zshrc, starship
-# base, empty manifests). Each clone gets its own fake $HOME so stow targets
-# and the interactive-zsh smoke test never touch the real home directory.
-# Runs the REAL CLI (`<clone>/bin/dotfiles sync --auto`) per scenario and
-# asserts on state/last-sync + git state. Exits non-zero on any FAIL.
+# bin/dot + the bin/dotfiles shim + bin/zsh-smoke-test, a tiny packages/shell
+# zshrc, starship base, empty manifests). Each clone gets its own fake $HOME
+# so stow targets and the interactive-zsh smoke test never touch the real
+# home directory. Runs the REAL CLI (`<clone>/bin/dot sync --auto`) per
+# scenario and asserts on state/last-sync + git state. Exits non-zero on any
+# FAIL.
 set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -53,7 +54,7 @@ last_sync() { cat "$1/state/last-sync" 2>/dev/null || echo "<no last-sync>"; }
 run_sync() {
   local clone="$1" home="$2"; shift 2
   SYNC_RC=0
-  SYNC_OUT="$(env HOME="$home" "$@" "$clone/bin/dotfiles" sync --auto 2>&1)" || SYNC_RC=$?
+  SYNC_OUT="$(env HOME="$home" "$@" "$clone/bin/dot" sync --auto 2>&1)" || SYNC_RC=$?
 }
 
 # ---------------------------------------------------------------- fixture ---
@@ -63,8 +64,8 @@ echo "sandbox: $SANDBOX"
 seed="$SANDBOX/seed"
 mkdir -p "$seed/bin" "$seed/manifests" "$seed/packages/shell" \
          "$seed/packages/starship/.config/starship" "$seed/vendor"
-cp "$REPO_ROOT/bin/dotfiles" "$REPO_ROOT/bin/zsh-smoke-test" "$seed/bin/"
-chmod +x "$seed/bin/dotfiles" "$seed/bin/zsh-smoke-test"
+cp "$REPO_ROOT/bin/dot" "$REPO_ROOT/bin/dotfiles" "$REPO_ROOT/bin/zsh-smoke-test" "$seed/bin/"
+chmod +x "$seed/bin/dot" "$seed/bin/dotfiles" "$seed/bin/zsh-smoke-test"
 
 cat > "$seed/packages/shell/.zshrc" <<'EOF'
 # sandbox zshrc (fixture) — must stay trivially valid
@@ -101,7 +102,7 @@ mkdir -p "$HOME_A" "$HOME_B"
 scenario "0: fixture baseline (apply + smoke in fake homes)"
 for pair in "$A:$HOME_A" "$B:$HOME_B"; do
   clone="${pair%%:*}" home="${pair##*:}"
-  if env HOME="$home" "$clone/bin/dotfiles" apply >/dev/null 2>&1; then
+  if env HOME="$home" "$clone/bin/dot" apply >/dev/null 2>&1; then
     pass "apply in $(basename "$clone")"
   else
     fail "apply in $(basename "$clone")"
@@ -114,6 +115,8 @@ for pair in "$A:$HOME_A" "$B:$HOME_B"; do
 done
 assert_eq "fake home .zshrc is the sandbox one" \
   "ok" "$(env HOME="$HOME_B" zsh -ic 'echo $SANDBOX_ZSHRC' 2>/dev/null)"
+assert_contains "bin/dotfiles shim execs dot (help via shim)" \
+  "Usage: dot <command>" "$(env HOME="$HOME_A" "$A/bin/dotfiles" help 2>&1)"
 
 # ------------------------------------------------------------- scenarios ---
 
@@ -363,7 +366,7 @@ state_before="$(last_sync "$B")"
 run_sync "$B" "$HOME_B" DOTFILES_QUIET_MINS=0
 assert_eq "lock held: exit code 0 (missed run is cheap)" 0 "$SYNC_RC"
 assert_contains "lock held: in-progress message" \
-  "another dotfiles run in progress (pid $lock_pid)" "$SYNC_OUT"
+  "another dot run in progress (pid $lock_pid)" "$SYNC_OUT"
 assert_eq "lock held: last-sync untouched" "$state_before" "$(last_sync "$B")"
 if [ -d "$B/state/run.lock" ]; then
   pass "foreign lock left in place"

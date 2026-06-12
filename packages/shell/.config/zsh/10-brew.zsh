@@ -1,6 +1,6 @@
 export HOMEBREW_NO_ENV_HINTS=1
 
-# Cached `brew shellenv` (rendered by dotfiles apply/upgrade); eval only when missing
+# Cached `brew shellenv` (rendered by dot apply/upgrade); eval only when missing
 if [[ -r "$HOME/dotfiles/state/init/brew.zsh" ]]; then
   source "$HOME/dotfiles/state/init/brew.zsh"
 elif [[ -d "/opt/homebrew" ]]; then
