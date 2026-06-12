@@ -34,7 +34,7 @@ cdw() {
 }
 
 # Open a workspace in VS Code
-cw() {
+vsw() {
   local dir
   dir="$(_workspace_dir "$1")" || return
   code "$dir"
@@ -66,4 +66,4 @@ _workspace_completion() {
   _files -W "$WORKSPACES_ROOT" -/
 }
 
-compdef _workspace_completion cdw cw ccw cxw tnw
+compdef _workspace_completion cdw vsw ccw cxw tnw
