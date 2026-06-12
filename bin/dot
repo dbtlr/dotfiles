@@ -14,6 +14,11 @@ PACKAGES_DIR="$DOTFILES_DIR/packages"
 # unattended runs won't resolve brew otherwise.
 export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:/opt/homebrew/bin:/usr/local/bin:$PATH"
 
+# Never let brew prompt inside any dot verb (y/n confirmations, tap-trust
+# asks): interactive prompts hang launchd/systemd jobs, and even manual
+# `dot upgrade` should be one-shot. Call brew directly when you want asks.
+export HOMEBREW_NO_ASK=1
+
 case "$(uname -s)" in
   Darwin) DOTFILES_OS="macos" ;;
   Linux)  DOTFILES_OS="linux" ;;
