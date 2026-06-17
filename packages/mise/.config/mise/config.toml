@@ -1,13 +1,15 @@
 [tools]
 bun = "latest"
 node = "24"
-pnpm = "11"
-vp = "latest"
-uv = "latest"
+pnpm = "latest"
 
 rust = "latest"
 just = "latest"
+uv = "latest"
 
 claude = "latest"
 codex = "latest"
 "npm:agent-browser" = "latest"
+
+[settings]
+minimum_release_age_excludes = ["bun", "node", "pnpm", "uv", "claude", "codex"]
