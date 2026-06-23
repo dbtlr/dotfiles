@@ -9,7 +9,10 @@ ccrc() {
   [[ "$2" == "-f" || "$2" == "--force" ]] && force=1
 
   local dir="/Volumes/data/workspaces/$name"
-  local session="ccrc-$name"
+
+  # sanitize for tmux/prefix: tmux treats '.' as session.window.pane
+  local slug="${name//./-}"
+  local session="ccrc-$slug"
 
   if [[ ! -d "$dir" ]]; then
     print -u2 "ccrc: no such directory: $dir"
@@ -17,13 +20,12 @@ ccrc() {
   fi
 
   local cmd="claude remote-control \
---name $name \
---remote-control-session-name-prefix $name \
+--name $slug \
+--remote-control-session-name-prefix $slug \
 --spawn worktree \
 --permission-mode bypassPermissions"
 
   if tmux has-session -t "$session" 2>/dev/null; then
-    # Session exists — is claude actually running in it?
     if tmux list-panes -t "$session" -F '#{pane_current_command}' 2>/dev/null \
          | grep -q 'claude\|node'; then
       if (( force )); then
@@ -34,7 +36,6 @@ ccrc() {
         return 0
       fi
     else
-      # Stale shell, no claude — recreate cleanly
       print "ccrc: $session exists but claude not running; recreating"
       tmux kill-session -t "$session"
     fi
