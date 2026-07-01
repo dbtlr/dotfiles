@@ -21,3 +21,8 @@
   behavior before large implementation changes.
 - **No broken windows.** Fix errors and warnings encountered while working.
 - **Not complete until it is verified.** All tasks should have a verification run by an adversarial agent and be presented to a human before it is declared done.
+
+## When Using The Superpowers Plugin / Skills
+
+- **MANDATORY: DO NOT INVOKE SUPERPOWERS AUTOMATICALLY**: Do not load the `use-superpowers` skill unless the user explicit triggers it OR they say something like "Using Superpowers, ...".
+- **MANDATORY: DO NOT COMMIT SUPERPOWERS DOCUMENTS**: Superpowers **brainstorm** and **writing-plans** skills create `spec` and `plan` documents. These should be added to the Atlas vault, rather than the direct repo. This helps with viewing the documents and avoids extra documents in the code that go out of date. They should be added to `/Volumes/data/vaults/atlas/artifacts/scratch/`.
