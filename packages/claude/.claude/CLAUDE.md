@@ -26,3 +26,9 @@
 
 - **MANDATORY: DO NOT INVOKE SUPERPOWERS AUTOMATICALLY**: Do not load the `use-superpowers` skill unless the user explicit triggers it OR they say something like "Using Superpowers, ...".
 - **MANDATORY: DO NOT COMMIT SUPERPOWERS DOCUMENTS**: Superpowers **brainstorm** and **writing-plans** skills create `spec` and `plan` documents. These should be added to the Atlas vault, rather than the direct repo. This helps with viewing the documents and avoids extra documents in the code that go out of date. They should be added to `/Volumes/data/vaults/atlas/artifacts/scratch/`.
+
+## Authoring Guidelines
+
+- **MANDATORY: DO NOT REFERENCE CLAUDE**: When creating commits or pull requests, do not reference Claude, Claude Code, or links to Claude remote control sessions
+- **IMPORTANT: DO NOT REFERENCE ATLAS WORKSPACE**: When creating or editting files in a repository, do not reference files or state in the Atlas repository. Similarly, do not reference Atlas files or state in git commits or pull requests.
+- **MANDATORY: DO NOT REFERENCE THE USER**: When writing repository files, do not write prose that references the user. Your job is to not write prose about what the user wants, thought, or said, instead you should talk about the durable facts and results in a concise manner.
