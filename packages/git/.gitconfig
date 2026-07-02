@@ -7,7 +7,7 @@
 
 [core]
 	editor = nvim
-	excludesfile = /Users/${USER}/.gitignore_global
+	excludesfile = ~/.gitignore_global
 
 [pull]
 	rebase = false

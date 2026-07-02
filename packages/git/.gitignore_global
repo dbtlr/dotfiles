@@ -4,3 +4,7 @@
 
 # Atlas Repo Config
 .atlas.toml
+
+# Saga Config
+.saga.local.json
+.claude/saga-claude-hook.sh
