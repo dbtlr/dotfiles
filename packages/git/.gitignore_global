@@ -8,3 +8,4 @@
 # Saga Config
 .saga.local.json
 .claude/saga-claude-hook.sh
+**/.claude/.cc-writes/
