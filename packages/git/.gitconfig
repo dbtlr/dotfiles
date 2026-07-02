@@ -22,3 +22,5 @@
 	p = pull
 	nb = checkout -b
 	d = diff
+[push]
+	autoSetupRemote = true

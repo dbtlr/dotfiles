@@ -1,0 +1,6 @@
+
+# Local launch/autostart marker files
+.autostart
+
+# Atlas Repo Config
+.atlas.toml
