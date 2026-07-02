@@ -11,6 +11,7 @@
 - Editor: nvim, vs code
 - Shell: zsh (see dotfiles for config)
 - Package manager: apt on Linux, brew on macOS (check $DOTFILES_OS)
+- Worktree manager: `wt` (Worktrunk) - use the `/worktrunk` skill when working with git worktrees
 
 ## How We Work
 
