@@ -21,7 +21,7 @@
 - **Discuss first, code second.** Align on package boundaries and user-facing
   behavior before large implementation changes.
 - **No broken windows.** Fix errors and warnings encountered while working.
-- **Not complete until it is verified.** All tasks should have a verification run by an adversarial agent and be presented to a human before it is declared done.
+- **Not complete until it is verified.** All tasks should have a verification run by an adversarial agent and be presented to a human as a PR before a task is filed as completed.
 
 ## When Using The Superpowers Plugin / Skills
 
