@@ -12,6 +12,7 @@ codex = "latest"
 "npm:agent-browser" = "latest"
 viteplus = "latest"
 "npm:t3" = "latest"
+python = "latest"
 
 [settings]
 minimum_release_age_excludes = ["bun", "node", "pnpm", "uv", "claude", "codex"]

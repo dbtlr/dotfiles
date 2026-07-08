@@ -58,3 +58,7 @@ Hard rules (always apply):
   task failing at Opus means the scoping is wrong, not the model.
 - Effort moves cost more than model choice. Don't crank Sonnet to max — move up a tier.
   Don't start high "to be safe."
+
+## Code Reviews
+
+**INPORTANT**: The built in code review workflow pins to the current model. Never run code reviews with the `fable` model. Instead, **explicitly pin the code-review workflow to either an `opus` model, or lower if the task is more mechanical**.
