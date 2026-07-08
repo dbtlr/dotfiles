@@ -26,7 +26,7 @@
 ## When Using The Superpowers Plugin / Skills
 
 - **MANDATORY: DO NOT INVOKE SUPERPOWERS AUTOMATICALLY**: Do not load the `use-superpowers` skill unless the user explicit triggers it OR they say something like "Using Superpowers, ...".
-- **MANDATORY: DO NOT COMMIT SUPERPOWERS DOCUMENTS**: Superpowers **brainstorm** and **writing-plans** skills create `spec` and `plan` documents. These should be added to the Atlas vault, rather than the direct repo. This helps with viewing the documents and avoids extra documents in the code that go out of date. They should be added to `/Volumes/data/vaults/atlas/artifacts/scratch/`.
+- **MANDATORY: DO NOT COMMIT SUPERPOWERS DOCUMENTS**: Superpowers **brainstorm** and **writing-plans** skills create `spec` and `plan` documents. These should be added to the Atlas vault, rather than the direct repo. This helps with viewing the documents and avoids extra documents in the code that go out of date. They should be added to `~/vaults/atlas/artifacts/scratch/`.
 
 ## Authoring Guidelines
 

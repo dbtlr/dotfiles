@@ -1,5 +1,5 @@
 # Workspace helpers for $WORKSPACES_ROOT directories
-: "${WORKSPACES_ROOT:=/Volumes/data/workspaces}"
+: "${WORKSPACES_ROOT:=/Users/drew/workspaces}"
 
 # Resolve a workspace dir: arg -> $WORKSPACES_ROOT/<arg>, no arg -> fzf picker.
 # Prints the absolute path; fails on missing root, cancelled pick, or bad dir.
