@@ -22,17 +22,14 @@
   behavior before large implementation changes.
 - **No broken windows.** Fix errors and warnings encountered while working.
 - **Not complete until it is verified.** All tasks should have a verification run by an adversarial agent and be presented to a human as a PR before a task is filed as completed.
-
-## When Using The Superpowers Plugin / Skills
-
-- **MANDATORY: DO NOT INVOKE SUPERPOWERS AUTOMATICALLY**: Do not load the `use-superpowers` skill unless the user explicit triggers it OR they say something like "Using Superpowers, ...".
-- **MANDATORY: DO NOT COMMIT SUPERPOWERS DOCUMENTS**: Superpowers **brainstorm** and **writing-plans** skills create `spec` and `plan` documents. These should be added to the Atlas vault, rather than the direct repo. This helps with viewing the documents and avoids extra documents in the code that go out of date. They should be added to `~/vaults/atlas/artifacts/scratch/`.
+- **Main agent orchestrates.** The main agent's job is to orchestrate work with other models. This is done both to control costs, as well as to preserve context.
 
 ## Authoring Guidelines
 
 - **MANDATORY: DO NOT REFERENCE CLAUDE**: When creating commits or pull requests, do not reference Claude, Claude Code, or links to Claude remote control sessions
 - **IMPORTANT: DO NOT REFERENCE ATLAS WORKSPACE**: When creating or editting files in a repository, do not reference files or state in the Atlas repository. Similarly, do not reference Atlas files or state in git commits or pull requests.
 - **MANDATORY: DO NOT REFERENCE THE USER**: When writing repository files, do not write prose that references the user. Your job is to not write prose about what the user wants, thought, or said, instead you should talk about the durable facts and results in a concise manner.
+- **MANDATORY: DO NOT REFERENCE LOCAL PATHS**: When writing code and test harnesses, do not include links it local paths. Assume these to be configurable instead and use mock paths in tests.
 
 ## Model Orchestration
 
@@ -43,8 +40,8 @@ demonstrably fails. On Max, tokens are rate-limit budget: Fable burns ~5x Sonnet
 
 | Role | Model | Default effort |
 |---|---|---|
-| Orchestrate: shape, decompose, delegate, judge summaries | Fable 5 | high |
-| Execute autonomously from a plan; deep debugging; substantive review | Opus 4.8 | high (xhigh for hard/agentic work) |
+| Orchestrate: shape, decompose, delegate, judge summaries | Fable 5 or Opus 4.8 | high |
+| Execute autonomously from a plan; deep debugging; substantive review | Opus 4.8 | high |
 | Scoped, mechanical, verifiable tasks; exploration for the orchestrator | Sonnet 5 | medium |
 
 Hard rules (always apply):
@@ -62,3 +59,5 @@ Hard rules (always apply):
 ## Code Reviews
 
 **INPORTANT**: The built in code review workflow pins to the current model. Never run code reviews with the `fable` model. Instead, **explicitly pin the code-review workflow to either an `opus` model, or lower if the task is more mechanical**.
+
+- Before any task completes and it is pushed as a PR, run an adversarial review against it.
