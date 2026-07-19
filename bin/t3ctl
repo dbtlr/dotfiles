@@ -30,11 +30,21 @@ cmd_install() {
     red "template not found: $TEMPLATE"
     exit 1
   fi
+  if [ -z "${ATLAS_PATH:-}" ]; then
+    yellow "ATLAS_PATH not set in this shell — daemon will run without it"
+  fi
   mkdir -p "$(dirname "$LOG")" "$HOME/Library/LaunchAgents"
   rotate_log
-  sed "s|__HOME__|$HOME|g" "$TEMPLATE" > "$DEST.tmp"
+  sed -e "s|__HOME__|$HOME|g" -e "s|__ATLAS_PATH__|${ATLAS_PATH:-}|g" \
+    "$TEMPLATE" > "$DEST.tmp"
   mv "$DEST.tmp" "$DEST"
   launchctl bootout "$(domain)" 2>/dev/null || true
+  # bootstrap fails until launchd finishes tearing down the old instance
+  local wait=0
+  while is_loaded && [ "$wait" -lt 15 ]; do
+    sleep 1
+    wait=$((wait + 1))
+  done
 
   local attempt loaded=0
   for attempt in 1 2; do
