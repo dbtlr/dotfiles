@@ -5,6 +5,7 @@
   "trustedformulae": [
     "anomalyco/tap/opencode",
     "antoniorodr/memo/memo",
+    "mistertea/et/et",
     "openclaw/tap/gogcli",
     "steipete/tap/remindctl",
     "yakitrak/yakitrak/obsidian-cli"
