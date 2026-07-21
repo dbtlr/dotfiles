@@ -8,7 +8,7 @@ ccrc() {
   local force=0
   [[ "$2" == "-f" || "$2" == "--force" ]] && force=1
 
-  local dir="~/workspaces/$name"
+  local dir="$HOME/workspaces/$name"
 
   # sanitize for tmux/prefix: tmux treats '.' as session.window.pane
   local slug="${name//./-}"
