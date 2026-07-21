@@ -15,8 +15,7 @@
 
 ## How We Work
 
-- **Never push to main.** All work should be done in a branch or worktree and
-  pushed as a PR.
+- **Never push to main.** All work should be done in a branch or worktree and pushed as a PR.
 - **Small meaningful commits.** Create useful checkpoints on long tasks, that indicate a working point in time.
 - **Discuss first, code second.** Align on package boundaries and user-facing
   behavior before large implementation changes.
@@ -27,7 +26,7 @@
 ## Authoring Guidelines
 
 - **MANDATORY: DO NOT REFERENCE CLAUDE**: When creating commits or pull requests, do not reference Claude, Claude Code, or links to Claude remote control sessions
-- **IMPORTANT: DO NOT REFERENCE ATLAS WORKSPACE**: When creating or editting files in a repository, do not reference files or state in the Atlas repository. Similarly, do not reference Atlas files or state in git commits or pull requests.
+- **IMPORTANT: DO NOT REFERENCE ATLAS WORKSPACE**: When creating or editing files in a repository, do not reference files or state in the Atlas repository. Similarly, do not reference Atlas files or state in git commits or pull requests.
 - **MANDATORY: DO NOT REFERENCE THE USER**: When writing repository files, do not write prose that references the user. Your job is to not write prose about what the user wants, thought, or said, instead you should talk about the durable facts and results in a concise manner.
 - **MANDATORY: DO NOT REFERENCE LOCAL PATHS**: When writing code and test harnesses, do not include links it local paths. Assume these to be configurable instead and use mock paths in tests.
 
@@ -39,12 +38,13 @@ itself → route up. Never start at the top tier; escalate when a cheaper tier
 demonstrably fails. On Max, tokens are rate-limit budget: Fable burns ~5x Sonnet.
 
 | Role | Model | Default effort |
-|---|---|---|
+| --- | --- | --- |
 | Orchestrate: shape, decompose, delegate, judge summaries | Fable 5 or Opus 4.8 | high |
 | Execute autonomously from a plan; deep debugging; substantive review | Opus 4.8 | high |
 | Scoped, mechanical, verifiable tasks; exploration for the orchestrator | Sonnet 5 | medium |
 
 Hard rules (always apply):
+
 - Protect the orchestrator's context: subagents explore and return summaries — never
   transcripts or file dumps.
 - Every delegation ships scope, acceptance criteria, and a return format. Can't state
@@ -58,6 +58,6 @@ Hard rules (always apply):
 
 ## Code Reviews
 
-**INPORTANT**: The built in code review workflow pins to the current model. Never run code reviews with the `fable` model. Instead, **explicitly pin the code-review workflow to either an `opus` model, or lower if the task is more mechanical**.
+**IMPORTANT**: The built in code review workflow pins to the current model. Never run code reviews with the `fable` model. Instead, **explicitly pin the code-review workflow to either an `opus` model, or lower if the task is more mechanical**.
 
-- Before any task completes and it is pushed as a PR, run an adversarial review against it.
+- Before any task completes that is writing code, and it is pushed as a PR, run an adversarial review against it.

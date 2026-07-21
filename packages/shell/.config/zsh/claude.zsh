@@ -20,9 +20,6 @@ ccrc() {
   fi
 
   local cmd="claude remote-control \
---name $slug \
---remote-control-session-name-prefix $slug \
---spawn worktree \
 --permission-mode bypassPermissions"
 
   if tmux has-session -t "$session" 2>/dev/null; then
