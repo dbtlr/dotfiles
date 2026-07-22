@@ -387,5 +387,7 @@
 #
 # See `wt hook` (https://worktrunk.dev/hook/) for hook types, execution order, template variables, and examples. User hooks apply to all projects; project hooks (https://worktrunk.dev/config/#project-configuration) apply only to that repository.
 
+worktree-path = "{{ repo_path }}/.git/worktrees/{{ branch | sanitize }}"
+
 [post-start]
 copy = "wt step copy-ignored"
