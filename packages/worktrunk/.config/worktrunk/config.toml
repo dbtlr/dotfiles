@@ -391,3 +391,10 @@ worktree-path = "{{ repo_path }}/.git/worktrees/{{ branch | sanitize }}"
 
 [post-start]
 copy = "wt step copy-ignored"
+# Rewrite-era base guard (2026-07-23): worktree creation in norn must not base on
+# the default branch — the long-lived line is rewrite/0017 and every wrong-base
+# create has cost a rework cycle. Pass --base @ (current branch) when creating.
+# Deliberate main-based worktrees (critical fixes): WT_ALLOW_DEFAULT_BASE=1.
+# Drop this block at rewrite graduation (ADR 0018 switchover).
+[projects."github.com/dbtlr/norn"]
+pre-start.base-guard = '''sh -c '[ "{{ base }}" != "{{ default_branch }}" ] && exit 0; [ "$WT_ALLOW_DEFAULT_BASE" = "1" ] && exit 0; echo "base-guard: refusing to create a worktree based on {{ default_branch }} during the rewrite era. Use --base @ for the current branch, or WT_ALLOW_DEFAULT_BASE=1 for a deliberate {{ default_branch }}-based worktree." >&2; exit 1' '''
