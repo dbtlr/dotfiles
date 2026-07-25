@@ -123,3 +123,5 @@ fi
 . "/tmp/oracle-0481/env"
 
 . "/tmp/norn-oracle-0481/env"
+
+. "/tmp/oracle-v0.48.1/env"
