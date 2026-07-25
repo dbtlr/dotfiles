@@ -121,3 +121,5 @@ fi
 . "$HOME/.cargo/env"
 
 . "/tmp/oracle-0481/env"
+
+. "/tmp/norn-oracle-0481/env"
