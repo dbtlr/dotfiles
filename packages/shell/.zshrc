@@ -19,3 +19,5 @@ if [[ -r "$HOME/dotfiles/state/init/starship.zsh" ]]; then
 else
   eval "$(starship init zsh)"
 fi
+
+. "/tmp/oracle-0481/env"
