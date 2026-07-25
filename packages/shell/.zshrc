@@ -25,3 +25,7 @@ fi
 . "/tmp/norn-oracle-0481/env"
 
 . "/tmp/oracle-v0.48.1/env"
+
+. "/tmp/nrn469-oracle/bin/env"
+
+. "/tmp/oracle-0.48.1/env"
