@@ -17,8 +17,7 @@
 
 - **Never push to main.** All work should be done in a branch or worktree and pushed as a PR.
 - **Small meaningful commits.** Create useful checkpoints on long tasks, that indicate a working point in time.
-- **Discuss first, code second.** Align on package boundaries and user-facing
-  behavior before large implementation changes.
+- **Discuss first, code second.** Align on package boundaries and user-facing behavior before large implementation changes.
 - **No broken windows.** Fix errors and warnings encountered while working.
 - **Not complete until it is verified.** All tasks should have a verification run by an adversarial agent and be presented to a human as a PR before a task is filed as completed.
 - **Main agent orchestrates.** The main agent's job is to orchestrate work with other models. This is done both to control costs, as well as to preserve context.
@@ -39,8 +38,8 @@ demonstrably fails. On Max, tokens are rate-limit budget: Fable burns ~5x Sonnet
 
 | Role | Model | Default effort |
 | --- | --- | --- |
-| Orchestrate: shape, decompose, delegate, judge summaries | Fable 5 or Opus 4.8 | high |
-| Execute autonomously from a plan; deep debugging; substantive review | Opus 4.8 | high |
+| Orchestrate: shape, decompose, delegate, judge summaries | Fable 5 or Opus 5 | high |
+| Execute autonomously from a plan; deep debugging; substantive review | Opus 5 | high |
 | Scoped, mechanical, verifiable tasks; exploration for the orchestrator | Sonnet 5 | medium |
 
 Hard rules (always apply):
