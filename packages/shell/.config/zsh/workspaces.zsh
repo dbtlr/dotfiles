@@ -58,7 +58,7 @@ vsw() {
 ccw() {
   local dir
   dir="$(_workspace_dir "$1")" || return
-  cd "$dir" && cc "${@:2}"
+  cd "$dir" && cl "${@:2}"
 }
 
 # cd to a workspace and run codex (extra args pass through)

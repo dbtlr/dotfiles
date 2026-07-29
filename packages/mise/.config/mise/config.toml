@@ -13,6 +13,7 @@ codex = "latest"
 viteplus = "latest"
 "npm:t3" = "latest"
 python = "latest"
+opencode = "latest"
 
 [settings]
 minimum_release_age_excludes = ["bun", "node", "pnpm", "uv", "claude", "codex"]
