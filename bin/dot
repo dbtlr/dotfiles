@@ -64,6 +64,7 @@ cmd_apply() {
   done
   render_starship
   render_init_cache
+  render_completions
 }
 
 render_starship() {
@@ -133,6 +134,66 @@ render_init_cache() {
     rm -f "$f"
   fi
   green "rendered init caches"
+}
+
+# t3 lives behind a mise shim, which is not always on PATH for non-interactive
+# runs (launchd, cron). Resolve it the same way t3ctl does.
+t3_bin() {
+  if command -v t3 >/dev/null; then
+    echo t3
+  elif [ -x "$HOME/.local/bin/mise" ]; then
+    echo "$HOME/.local/bin/mise x -- t3"
+  fi
+}
+
+# Upstream fix-ups for `t3 --completions zsh` (broken as of t3 v0.0.30).
+# In the top-level spec the optional <cwd> is emitted as an unnumbered
+# positional *alongside* '1:command:->command'. _arguments binds the bare spec
+# to slot 1, so the ->command state never fires and `t3 <TAB>` offers nothing.
+# Drop the bare spec where it collides; everywhere else it carries an empty
+# action, so give it a directory action to make <cwd> actually complete.
+# Re-check on t3 upgrades: if upstream fixes this, these become no-ops.
+patch_t3_completions() {
+  awk '
+    /^[ \t]*\047:Working directory/ { held = $0; next }
+    held != "" {
+      if ($0 !~ /1:command:->command/) {
+        sub(/:\047$/, ":_files -/\047", held)
+        print held
+      }
+      held = ""
+    }
+    { print }
+    END { if (held != "") print held }
+  '
+}
+
+render_completions() {
+  local dir="$DOTFILES_DIR/state/completions"
+  mkdir -p "$dir"
+  # Generated completion functions, autoloaded via fpath (see
+  # packages/shell/.config/zsh/20-completions.zsh). Same atomic tmp+mv rule as
+  # the init caches: compinit must never read a half-written function.
+  local f="$dir/_t3" changed=0
+  local t3; t3="$(t3_bin)"
+  if [ -n "$t3" ]; then
+    if $t3 --completions zsh 2>/dev/null | patch_t3_completions > "$f.tmp" && [ -s "$f.tmp" ]; then
+      if ! cmp -s "$f.tmp" "$f"; then changed=1; fi
+      mv "$f.tmp" "$f"
+    else
+      rm -f "$f.tmp"
+    fi
+  elif [ -f "$f" ]; then
+    rm -f "$f"; changed=1
+  fi
+  # compinit -C reuses a <24h dump verbatim, so an added or changed completion
+  # stays invisible until the dump is rebuilt. Drop it only on a real change.
+  if [ "$changed" -eq 1 ]; then
+    rm -f "$HOME/.zcompdump"
+    green "rendered completions (zcompdump invalidated)"
+  else
+    green "rendered completions"
+  fi
 }
 
 cmd_doctor() {
@@ -372,6 +433,8 @@ cmd_upgrade() {
 
   # Upgrades can change tool init scripts — refresh the cached evals.
   render_init_cache
+  # A new tool version can add subcommands/flags — regenerate completions too.
+  render_completions
 
   [ "$failures" -eq 0 ] && return 0 || return 1
 }
