@@ -8,11 +8,11 @@ just = "latest"
 uv = "latest"
 
 claude = "latest"
-codex = "latest"
 "npm:agent-browser" = "latest"
 viteplus = "latest"
 python = "latest"
 opencode = "latest"
+codex = "latest"
 
 [settings]
 minimum_release_age_excludes = ["bun", "node", "pnpm", "uv", "claude", "codex"]
