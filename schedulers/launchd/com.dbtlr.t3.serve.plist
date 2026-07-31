@@ -8,24 +8,16 @@
 	<string>com.dbtlr.t3.serve</string>
 	<key>ProgramArguments</key>
 	<array>
-		<string>__HOME__/.local/bin/mise</string>
-		<string>x</string>
-		<string>--</string>
-		<string>t3</string>
+		<string>__HOME__/.local/share/mise/shims/bun</string>
+		<string>__HOME__/.bun/bin/t3</string>
 		<string>serve</string>
-		<string>--mode</string>
-		<string>web</string>
-		<string>--host</string>
-		<string>127.0.0.1</string>
-		<string>--port</string>
-		<string>7333</string>
 	</array>
 	<key>WorkingDirectory</key>
 	<string>__HOME__</string>
 	<key>EnvironmentVariables</key>
 	<dict>
 		<key>PATH</key>
-		<string>__HOME__/.local/share/mise/shims:__HOME__/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+		<string>__HOME__/.bun/bin:__HOME__/.local/share/mise/shims:__HOME__/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
 		<key>ATLAS_PATH</key>
 		<string>__ATLAS_PATH__</string>
 	</dict>

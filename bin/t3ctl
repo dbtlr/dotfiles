@@ -117,7 +117,7 @@ cmd_status() {
   fi
 
   local ver
-  if ver="$("$HOME/.local/bin/mise" x -- t3 --version 2>/dev/null)"; then
+  if ver="$("$HOME/.local/share/mise/shims/bun" "$HOME/.bun/bin/t3" --version 2>/dev/null)"; then
     green "t3 version: $ver"
   else
     yellow "t3 version: unavailable"
