@@ -6,6 +6,13 @@ for config_file in ~/.config/zsh/*.zsh(-N); do
   source $config_file
 done
 
+# mise shims outrank package-manager prefixes (e.g. /opt/homebrew/bin) so mise-managed
+# tool versions resolve first. Sits after the modular configs, which is where the
+# homebrew prefix and mise activation add their PATH entries.
+mise_shims="$HOME/.local/share/mise/shims"
+[[ -d $mise_shims ]] && path=($mise_shims ${path:#$mise_shims})
+unset mise_shims
+
 # Plugins (vendored; syntax-highlighting must be sourced last)
 source "$HOME/dotfiles/vendor/zsh-autosuggestions/zsh-autosuggestions.zsh"
 source "$HOME/dotfiles/vendor/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
