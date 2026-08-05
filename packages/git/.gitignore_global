@@ -9,3 +9,5 @@
 .saga.local.json
 .claude/saga-claude-hook.sh
 **/.claude/.cc-writes/
+
+**/.claude/settings.local.json
