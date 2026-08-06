@@ -15,4 +15,4 @@ opencode = "latest"
 codex = "latest"
 
 [settings]
-minimum_release_age_excludes = ["bun", "node", "pnpm", "uv", "claude", "codex"]
+minimum_release_age_excludes = ["bun", "node", "pnpm", "uv", "claude", "codex", "opencode"]
