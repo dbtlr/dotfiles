@@ -9,7 +9,7 @@ uv = "latest"
 
 claude = "latest"
 "npm:agent-browser" = "latest"
-"npm:t3" = "latest"
+"npm:t3" = { version = "latest", trust_policy_excludes = ["@pierre/theme"] }
 viteplus = "latest"
 python = "latest"
 opencode = "latest"
