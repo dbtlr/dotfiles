@@ -9,10 +9,11 @@ uv = "latest"
 
 claude = "latest"
 "npm:agent-browser" = "latest"
+"npm:t3" = "latest"
 viteplus = "latest"
 python = "latest"
 opencode = "latest"
 codex = "latest"
 
 [settings]
-minimum_release_age_excludes = ["bun", "node", "pnpm", "uv", "claude", "codex", "opencode"]
+minimum_release_age_excludes = ["bun", "node", "pnpm", "uv", "claude", "codex", "opencode", "npm:t3"]
