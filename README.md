@@ -1,5 +1,8 @@
 # Dotfiles
 
+> **Archived.** The [fleet](https://github.com/dbtlr/fleet) repository now manages
+> every configuration domain this repository managed. Nothing here is applied to any machine.
+
 Self-converging dotfiles for valhalla and DB-MBP (macOS); `dot install` also
 supports Ubuntu hosts through apt. Configs are
 [GNU Stow](https://www.gnu.org/software/stow/) packages symlinked into `~`;
