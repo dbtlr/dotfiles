@@ -75,7 +75,6 @@ cat > "$seed/packages/starship/.config/starship/base.toml" <<'EOF'
 # sandbox starship base (fixture)
 add_newline = false
 EOF
-: > "$seed/manifests/Brewfile"
 : > "$seed/manifests/apt-packages.txt"
 : > "$seed/vendor/.gitkeep"
 printf '/state/\n' > "$seed/.gitignore"

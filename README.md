@@ -8,6 +8,9 @@ synced with origin and upgraded without manual ceremony.
 `dot` was named `dotfiles` before M6 — `bin/dotfiles` remains as a shim, so
 muscle memory and old scheduler renders keep working.
 
+Homebrew formulae, casks, and mise tools are owned by the fleet repository
+(`fleet packages <system> ...`, `fleet upgrade`), not by dotfiles.
+
 ## Fresh machine
 
 ```bash
@@ -16,8 +19,8 @@ git clone --recurse-submodules https://github.com/dbtlr/dotfiles.git ~/dotfiles
 exec zsh
 ```
 
-`install` is idempotent: brew/apt manifests, mise tools, stow apply, default
-shell, and — the conscious key-turn — the schedulers. From that point the
+`install` is idempotent: Homebrew and stow bootstrap (macOS) or apt manifests
+(Linux), stow apply, default shell, and — the conscious key-turn — the schedulers. From that point the
 machine auto-commits and syncs every 30 minutes; don't run it until the tree
 is in a state you're happy to commit.
 
@@ -25,10 +28,10 @@ is in a state you're happy to commit.
 
 | Verb | What it does |
 |---|---|
-| `dot install` | Bootstrap everything: packages (brew/apt), mise, stow, schedulers (idempotent) |
+| `dot install` | Bootstrap Homebrew/stow (macOS) or apt (Linux), stow, schedulers (idempotent) |
 | `dot apply` | Stow all packages into `~`, render starship + init caches (restow-safe) |
 | `dot doctor` | Offline health check: tools, symlinks, fallback, schedulers, divergence |
-| `dot upgrade` | Upgrade deps; `--auto` runs only the unattended (no-sudo, no-cask) bucket |
+| `dot upgrade` | Update vendored zsh plugins (and apt on Linux); `--auto` skips sudo |
 | `dot sync` | Converge with origin (below); `--auto` skips when you edited <30 min ago |
 | `dot status` | Machine status from `state/`; `--motd` is the daily shell banner |
 
@@ -52,8 +55,8 @@ conflict/revert/broken) bypass the debounce and show every shell until fixed.
 
 ```
 bin/        dot (the CLI), dotfiles (shim), zsh-smoke-test, zsh-bench, test-sync
-packages/   stow packages: shell, git, nvim, tmux, starship, mise, mise-linux (Linux only), bash, claude
-manifests/  Brewfile (macOS), apt-packages.txt + 50unattended-upgrades (Ubuntu)
+packages/   stow packages: shell, git, nvim, tmux, starship, bash, claude
+manifests/  apt-packages.txt + 50unattended-upgrades (Ubuntu)
 vendor/     zsh plugin submodules (autosuggestions, syntax-highlighting, completions)
 schedulers/ launchd plist + systemd unit templates, rendered/enabled by `dot install`
 state/      gitignored machine-local: last-sync/upgrade, quarantine, init caches, logs

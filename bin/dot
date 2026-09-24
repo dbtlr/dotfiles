@@ -35,7 +35,6 @@ packages_for_host() {
   for d in "$PACKAGES_DIR"/*/; do
     pkg="$(basename "$d")"
     case "$pkg" in
-      mise-linux) [ "$DOTFILES_OS" = "linux" ] || continue ;;
       homebrew)   [ "$DOTFILES_OS" = "macos" ] || continue ;;
     esac
     echo "$pkg"
@@ -375,10 +374,8 @@ cmd_upgrade() {
 
   # --- Auto bucket (no sudo, safe unattended) ---
 
-  if command -v mise >/dev/null; then
-    mise self-update -y >/dev/null 2>&1 || true   # no-op when not self-managed
-    if mise upgrade; then green "mise tools upgraded"; else red "mise upgrade failed"; failures=$((failures+1)); fi
-  fi
+  # Homebrew and mise belong to fleet (`fleet upgrade`); dotfiles upgrades only
+  # its own vendored plugins.
 
   if git -C "$DOTFILES_DIR" submodule update --remote --depth 1; then
     green "vendor plugins updated"
@@ -386,31 +383,7 @@ cmd_upgrade() {
     red "vendor plugin update failed"; failures=$((failures+1))
   fi
 
-  if [ "$DOTFILES_OS" = "macos" ]; then
-    if brew update >/dev/null 2>&1 && brew upgrade --formula; then
-      green "brew formulae upgraded"
-    else
-      red "brew formula upgrade failed"; failures=$((failures+1))
-    fi
-    local casks
-    casks="$(brew outdated --cask --quiet 2>/dev/null | grep -c . || true)"
-    if [ "$auto" -eq 1 ]; then
-      [ "$casks" -gt 0 ] && yellow "$casks cask(s) outdated — run: dot upgrade"
-    else
-      # --- Manual bucket: casks ---
-      if [ "$casks" -gt 0 ]; then
-        if brew upgrade --cask; then
-          casks=0
-          green "casks upgraded"
-        else
-          red "cask upgrade failed"; failures=$((failures+1))
-        fi
-      else
-        green "casks up to date"
-      fi
-    fi
-    printf 'casks_outdated=%s\n' "$casks" > "$DOTFILES_DIR/state/outdated"
-  else
+  if [ "$DOTFILES_OS" = "linux" ]; then
     local debs
     # sudo-free count: relies on the apt-daily timers keeping package lists fresh
     debs="$(apt-get -s upgrade 2>/dev/null | grep -c '^Inst' || true)"
@@ -426,6 +399,8 @@ cmd_upgrade() {
       fi
     fi
     printf 'apt_upgradable=%s\n' "$debs" > "$DOTFILES_DIR/state/outdated"
+  else
+    rm -f "$DOTFILES_DIR/state/outdated"
   fi
 
   printf '%s %s\n' "$(date '+%Y-%m-%dT%H:%M:%S%z')" "$([ "$failures" -eq 0 ] && echo ok || echo "failed=$failures")" \
@@ -624,12 +599,6 @@ cmd_sync() {
     cmd_apply
     git -C "$DOTFILES_DIR" submodule update --init --depth 1
 
-    if echo "$changed" | grep -Eq '^packages/mise(-linux)?/.*\.toml'; then
-      mise install && green "mise tools installed (manifest changed)" || yellow "mise install failed"
-    fi
-    if [ "$DOTFILES_OS" = "macos" ] && echo "$changed" | grep -q 'manifests/Brewfile'; then
-      brew bundle --no-upgrade --file="$DOTFILES_DIR/manifests/Brewfile" && green "brew bundle applied" || yellow "brew bundle failed"
-    fi
     if [ "$DOTFILES_OS" = "linux" ] && echo "$changed" | grep -q 'manifests/apt-packages.txt'; then
       yellow "apt manifest changed — run: dot install (sudo required)"
     fi
@@ -701,7 +670,6 @@ cmd_status() {
   local out_label="" out_count=""
   [ -f "$state/outdated" ] && IFS='=' read -r out_label out_count < "$state/outdated" || true
   case "$out_label" in
-    casks_outdated) out_label="cask(s) outdated" ;;
     apt_upgradable) out_label="apt package(s) upgradable" ;;
   esac
 
@@ -786,12 +754,14 @@ cmd_status() {
       green "upgrade: $up_result, $(age_days "$up_day") day(s) ago ($up_date)"
     fi
   fi
-  if [ -z "$out_count" ]; then
-    yellow "outdated: unknown — run: dot upgrade"
-  elif [ "$out_count" -gt 0 ] 2>/dev/null; then
-    yellow "outdated: $out_count $out_label — run: dot upgrade"
-  else
-    green "outdated: none"
+  if [ "$DOTFILES_OS" = "linux" ]; then
+    if [ -z "$out_count" ]; then
+      yellow "outdated: unknown — run: dot upgrade"
+    elif [ "$out_count" -gt 0 ] 2>/dev/null; then
+      yellow "outdated: $out_count $out_label — run: dot upgrade"
+    else
+      green "outdated: none"
+    fi
   fi
   if [ -z "$sync_status" ]; then
     yellow "sync: no record — run: dot sync"
@@ -856,7 +826,8 @@ cmd_install() {
       /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
       eval "$("$([ -x /opt/homebrew/bin/brew ] && echo /opt/homebrew/bin/brew || echo /usr/local/bin/brew)" shellenv)"
     fi
-    brew bundle --file="$DOTFILES_DIR/manifests/Brewfile"
+    # Formulae, casks, and mise tools belong to fleet: fleet packages <system> apply
+    command -v stow >/dev/null || brew install stow
   else
     sudo apt-get update
     { grep -vE '^\s*(#|$)' "$DOTFILES_DIR/manifests/apt-packages.txt" || true; } | xargs -r sudo apt-get install -y
@@ -875,13 +846,6 @@ cmd_install() {
 
   # Vendored zsh plugins (vendor/ submodules)
   git -C "$DOTFILES_DIR" submodule update --init --depth 1
-
-  # mise
-  if ! command -v mise >/dev/null; then
-    curl -fsSL https://mise.run | sh
-  fi
-
-  mise install
 
   # Default shell
   local zsh_path
