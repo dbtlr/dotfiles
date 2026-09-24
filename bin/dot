@@ -136,7 +136,7 @@ render_init_cache() {
 }
 
 # t3 lives behind a mise shim, which is not always on PATH for non-interactive
-# runs (launchd, cron). Resolve it the same way t3ctl does.
+# runs (launchd, cron). Fall back to running it through mise.
 t3_bin() {
   if command -v t3 >/dev/null; then
     echo t3
