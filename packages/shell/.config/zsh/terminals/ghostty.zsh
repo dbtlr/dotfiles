@@ -1,1 +1,0 @@
-# Ghostty terminal settings

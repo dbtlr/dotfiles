@@ -2,7 +2,7 @@
 
 *NOTE: This repository's git is maintained by an auto snapshot script.*
 
-This repository contains dotfiles that contain common scripts and shell configuration for Drew's computers.
+This repository contains dotfiles (git, nvim, tmux, and a few tool configs) for Drew's computers. The shell configuration is owned by the fleet repository.
 
 ## How We Work (local addendum)
 

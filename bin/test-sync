@@ -3,12 +3,11 @@
 #
 # Builds a sandbox in mktemp -d: bare origin.git + two clones (A "valhalla",
 # B "other host"), each a minimal-but-real dotfiles repo (this repo's
-# bin/dot + the bin/dotfiles shim + bin/zsh-smoke-test, a tiny packages/shell
-# zshrc, starship base, empty manifests). Each clone gets its own fake $HOME
-# so stow targets and the interactive-zsh smoke test never touch the real
-# home directory. Runs the REAL CLI (`<clone>/bin/dot sync --auto`) per
-# scenario and asserts on state/last-sync + git state. Exits non-zero on any
-# FAIL.
+# bin/dot + the bin/dotfiles shim, a tiny packages/example config, empty
+# manifests). Each clone gets its own fake $HOME so stow targets never touch
+# the real home directory. Runs the REAL CLI (`<clone>/bin/dot sync --auto`)
+# per scenario and asserts on state/last-sync + git state. Exits non-zero on
+# any FAIL.
 set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -61,22 +60,19 @@ run_sync() {
 
 echo "sandbox: $SANDBOX"
 
-seed="$SANDBOX/seed"
-mkdir -p "$seed/bin" "$seed/manifests" "$seed/packages/shell" \
-         "$seed/packages/starship/.config/starship" "$seed/vendor"
-cp "$REPO_ROOT/bin/dot" "$REPO_ROOT/bin/dotfiles" "$REPO_ROOT/bin/zsh-smoke-test" "$seed/bin/"
-chmod +x "$seed/bin/dot" "$seed/bin/dotfiles" "$seed/bin/zsh-smoke-test"
+# Relative path of the fixture config, both inside packages/example and in ~.
+CONF=".config/example/config"
 
-cat > "$seed/packages/shell/.zshrc" <<'EOF'
-# sandbox zshrc (fixture) — must stay trivially valid
-export SANDBOX_ZSHRC=ok
-EOF
-cat > "$seed/packages/starship/.config/starship/base.toml" <<'EOF'
-# sandbox starship base (fixture)
-add_newline = false
+seed="$SANDBOX/seed"
+mkdir -p "$seed/bin" "$seed/manifests" "$seed/packages/example/.config/example"
+cp "$REPO_ROOT/bin/dot" "$REPO_ROOT/bin/dotfiles" "$seed/bin/"
+chmod +x "$seed/bin/dot" "$seed/bin/dotfiles"
+
+cat > "$seed/packages/example/$CONF" <<'EOF'
+# sandbox config (fixture)
+fixture=ok
 EOF
 : > "$seed/manifests/apt-packages.txt"
-: > "$seed/vendor/.gitkeep"
 printf '/state/\n' > "$seed/.gitignore"
 
 git -C "$seed" init -q -b main
@@ -97,8 +93,8 @@ for c in "$A" "$B"; do
 done
 mkdir -p "$HOME_A" "$HOME_B"
 
-# Baseline: apply both clones into their fake homes; smoke must pass.
-scenario "0: fixture baseline (apply + smoke in fake homes)"
+# Baseline: apply both clones into their fake homes.
+scenario "0: fixture baseline (apply in fake homes)"
 for pair in "$A:$HOME_A" "$B:$HOME_B"; do
   clone="${pair%%:*}" home="${pair##*:}"
   if env HOME="$home" "$clone/bin/dot" apply >/dev/null 2>&1; then
@@ -106,22 +102,20 @@ for pair in "$A:$HOME_A" "$B:$HOME_B"; do
   else
     fail "apply in $(basename "$clone")"
   fi
-  if env HOME="$home" "$clone/bin/zsh-smoke-test" 30 >/dev/null 2>&1; then
-    pass "smoke test in fake home $(basename "$home")"
+  if [ -L "$home/$CONF" ] && [ "$home/$CONF" -ef "$clone/packages/example/$CONF" ]; then
+    pass "fake home $(basename "$home") has the stowed config symlink"
   else
-    fail "smoke test in fake home $(basename "$home")"
+    fail "fake home $(basename "$home") is missing the stowed config symlink"
   fi
 done
-assert_eq "fake home .zshrc is the sandbox one" \
-  "ok" "$(env HOME="$HOME_B" zsh -ic 'echo $SANDBOX_ZSHRC' 2>/dev/null)"
 assert_contains "bin/dotfiles shim execs dot (help via shim)" \
   "Usage: dot <command>" "$(env HOME="$HOME_A" "$A/bin/dotfiles" help 2>&1)"
 
 # ------------------------------------------------------------- scenarios ---
 
 scenario "1: clean propagate (push in A, sync in B pulls + applies)"
-printf 'alias sandbox_s1=true\n' >> "$A/packages/shell/.zshrc"
-git -C "$A" commit -qam "s1: add alias in A"
+printf 's1=true\n' >> "$A/packages/example/$CONF"
+git -C "$A" commit -qam "s1: add setting in A"
 git -C "$A" push -q origin main
 a_head="$(git -C "$A" rev-parse HEAD)"
 
@@ -129,11 +123,11 @@ run_sync "$B" "$HOME_B" DOTFILES_QUIET_MINS=0
 assert_eq "exit code 0" 0 "$SYNC_RC"
 assert_eq "B HEAD == A's pushed commit" "$a_head" "$(git -C "$B" rev-parse HEAD)"
 assert_contains "last-sync records ok+applied" " ok pulled 1 commit(s), applied" "$(last_sync "$B")"
-assert_contains "stowed zshrc in fake home has the new alias" \
-  "sandbox_s1" "$(cat "$HOME_B/.zshrc")"
+assert_contains "stowed config in fake home has the new setting" \
+  "s1=true" "$(cat "$HOME_B/$CONF")"
 
 scenario "2: dirty B -> auto-commit + push; A pulls it"
-printf 'alias sandbox_s2=true\n' >> "$B/packages/shell/.zshrc"
+printf 's2=true\n' >> "$B/packages/example/$CONF"
 run_sync "$B" "$HOME_B" DOTFILES_QUIET_MINS=0
 assert_eq "exit code 0" 0 "$SYNC_RC"
 assert_eq "B tree clean after sync" "" "$(git -C "$B" status --porcelain)"
@@ -148,14 +142,15 @@ assert_eq "A sync exit code 0" 0 "$SYNC_RC"
 assert_eq "A HEAD == B HEAD after pulling" \
   "$(git -C "$B" rev-parse HEAD)" "$(git -C "$A" rev-parse HEAD)"
 assert_contains "A last-sync ok+applied" " ok pulled 1 commit(s), applied" "$(last_sync "$A")"
+assert_contains "A's stowed config has B's setting" "s2=true" "$(cat "$HOME_A/$CONF")"
 
 scenario "3: quiet guard (fresh edit skips by default, proceeds with override)"
-printf '# s3 fresh edit\n' >> "$B/packages/shell/.zshrc"
+printf '# s3 fresh edit\n' >> "$B/packages/example/$CONF"
 run_sync "$B" "$HOME_B"   # default 30-min quiet period; the edit is seconds old
 assert_eq "exit code 0 (skip is not an error)" 0 "$SYNC_RC"
 assert_contains "last-sync records skipped" " skipped active edits (<30m)" "$(last_sync "$B")"
 assert_contains "B still dirty (nothing committed)" \
-  "packages/shell/.zshrc" "$(git -C "$B" status --porcelain)"
+  "packages/example/$CONF" "$(git -C "$B" status --porcelain)"
 
 run_sync "$B" "$HOME_B" DOTFILES_QUIET_MINS=0
 assert_eq "override: exit code 0" 0 "$SYNC_RC"
@@ -166,10 +161,10 @@ assert_contains "override: last-sync ok" " ok " "$(last_sync "$B")"
 
 scenario "4: rebase conflict -> abort, tree untouched, red state"
 git -C "$A" pull -q --rebase origin main   # converge A first
-printf 'alias side=a\n' >> "$A/packages/shell/.zshrc"
+printf 'side=a\n' >> "$A/packages/example/$CONF"
 git -C "$A" commit -qam "s4: A side"
 git -C "$A" push -q origin main
-printf 'alias side=b\n' >> "$B/packages/shell/.zshrc"
+printf 'side=b\n' >> "$B/packages/example/$CONF"
 git -C "$B" commit -qam "s4: B side"
 b_local="$(git -C "$B" rev-parse HEAD)"
 
@@ -188,47 +183,7 @@ fi
 # Resolve: drop B's conflicting commit, take origin's version.
 git -C "$B" reset -q --hard origin/main
 
-scenario "5: auto-revert (A pushes a broken zshrc; B's smoke test fails in fake home)"
-cat > "$A/packages/shell/.zshrc" <<'EOF'
-# deliberately broken fixture zshrc
-echo "BROKEN_ZSHRC_MARKER" >&2
-exit 7
-EOF
-git -C "$A" commit -qam "s5: break zshrc"
-git -C "$A" push -q origin main
-b_good="$(git -C "$B" rev-parse HEAD)"
-b_bad="$(git -C "$A" rev-parse HEAD)"
-
-run_sync "$B" "$HOME_B" DOTFILES_QUIET_MINS=0
-assert_eq "exit code 1" 1 "$SYNC_RC"
-assert_contains "last-sync records reverted" \
-  " reverted bad commit $b_bad — reverted to $b_good; fix and push" "$(last_sync "$B")"
-assert_eq "B back at pre-pull commit" "$b_good" "$(git -C "$B" rev-parse HEAD)"
-assert_eq "B still on branch main (not detached)" \
-  "main" "$(git -C "$B" rev-parse --abbrev-ref HEAD)"
-assert_eq "quarantine file holds the bad sha" \
-  "$b_bad" "$(cat "$B/state/quarantine" 2>/dev/null)"
-assert_contains "smoke test exercised the FAKE home zshrc (marker in output)" \
-  "BROKEN_ZSHRC_MARKER" "$SYNC_OUT"
-assert_contains "fake home zshrc content reverted to the good version" \
-  "SANDBOX_ZSHRC=ok" "$(cat "$HOME_B/.zshrc")"
-if env HOME="$HOME_B" "$B/bin/zsh-smoke-test" 30 >/dev/null 2>&1; then
-  pass "smoke passes again after revert"
-else
-  fail "smoke still failing after revert"
-fi
-
-# Recovery path (what the red MOTD line tells the user): fix on another host,
-# push; B un-quarantines on its next sync (no manual git on B needed).
-git -C "$A" revert --no-edit HEAD >/dev/null
-git -C "$A" push -q origin main
-run_sync "$B" "$HOME_B" DOTFILES_QUIET_MINS=0
-assert_eq "recovery sync exit code 0" 0 "$SYNC_RC"
-assert_contains "recovery last-sync ok" " ok " "$(last_sync "$B")"
-assert_eq "B converged with origin" \
-  "$(git --git-dir="$ORIGIN" rev-parse main)" "$(git -C "$B" rev-parse HEAD)"
-
-scenario "6: offline (origin unreachable) -> yellow note, exit 0"
+scenario "5: offline (origin unreachable) -> yellow note, exit 0"
 mv "$ORIGIN" "$ORIGIN.offline"
 b_head="$(git -C "$B" rev-parse HEAD)"
 run_sync "$B" "$HOME_B" DOTFILES_QUIET_MINS=0
@@ -237,126 +192,19 @@ assert_contains "last-sync records offline" " offline fetch failed (offline?)" "
 assert_eq "B HEAD unchanged" "$b_head" "$(git -C "$B" rev-parse HEAD)"
 mv "$ORIGIN.offline" "$ORIGIN"
 
-scenario "7: quarantine persists (second sync refuses to re-pull the bad commit)"
-git -C "$A" pull -q --rebase origin main
-cat > "$A/packages/shell/.zshrc" <<'EOF'
-# deliberately broken fixture zshrc (s7)
-echo "BROKEN_S7_MARKER" >&2
-exit 7
-EOF
-git -C "$A" commit -qam "s7: break zshrc"
-git -C "$A" push -q origin main
-b_good="$(git -C "$B" rev-parse HEAD)"
-b_bad="$(git -C "$A" rev-parse HEAD)"
-
-run_sync "$B" "$HOME_B" DOTFILES_QUIET_MINS=0     # first run: auto-revert
-assert_eq "revert run exit code 1" 1 "$SYNC_RC"
-assert_eq "B on branch main after revert" "main" "$(git -C "$B" rev-parse --abbrev-ref HEAD)"
-assert_eq "B main reset to the good commit" "$b_good" "$(git -C "$B" rev-parse HEAD)"
-assert_eq "quarantine file holds the bad sha" "$b_bad" "$(cat "$B/state/quarantine" 2>/dev/null)"
-
-backups_before="$(find "$HOME_B" -maxdepth 1 -name '.zshrc.backup-*' | wc -l | tr -d ' ')"
-run_sync "$B" "$HOME_B" DOTFILES_QUIET_MINS=0     # second run: quarantine blocks re-apply
-assert_eq "second run exit code 1" 1 "$SYNC_RC"
-assert_contains "last-sync re-asserts reverted/still-at-tip" \
-  " reverted bad commit $b_bad still at origin tip — fix and push" "$(last_sync "$B")"
-assert_eq "no re-pull: HEAD still the good commit" "$b_good" "$(git -C "$B" rev-parse HEAD)"
-assert_eq "still on main (not detached)" "main" "$(git -C "$B" rev-parse --abbrev-ref HEAD)"
-assert_contains "fake home zshrc still the good one (no re-apply)" \
-  "SANDBOX_ZSHRC=ok" "$(cat "$HOME_B/.zshrc")"
-backups_after="$(find "$HOME_B" -maxdepth 1 -name '.zshrc.backup-*' | wc -l | tr -d ' ')"
-assert_eq "no new backup files (no re-apply)" "$backups_before" "$backups_after"
-if [ -f "$B/state/quarantine" ]; then
-  pass "quarantine file still present"
-else
-  fail "quarantine file missing"
-fi
-case "$SYNC_OUT" in
-  *BROKEN_S7_MARKER*) fail "bad zshrc was re-applied (marker reached the smoke test)" ;;
-  *) pass "bad commit never re-applied (no marker in output)" ;;
-esac
-
-scenario "8: quarantine lifts when origin moves to a fix"
-git -C "$A" revert --no-edit HEAD >/dev/null
-git -C "$A" push -q origin main
+scenario "6: unpushed local commit on a clean tree is pushed"
+origin_before="$(git --git-dir="$ORIGIN" rev-parse main)"
+printf 's6=true\n' >> "$B/packages/example/$CONF"
+git -C "$B" commit -qam "s6: manual local commit"
 run_sync "$B" "$HOME_B" DOTFILES_QUIET_MINS=0
 assert_eq "exit code 0" 0 "$SYNC_RC"
-assert_eq "B converged to the fix" \
-  "$(git --git-dir="$ORIGIN" rev-parse main)" "$(git -C "$B" rev-parse HEAD)"
-if [ ! -e "$B/state/quarantine" ]; then
-  pass "quarantine file removed"
-else
-  fail "quarantine file still present"
-fi
-assert_eq "on main" "main" "$(git -C "$B" rev-parse --abbrev-ref HEAD)"
-assert_contains "last-sync ok+applied" " ok pulled" "$(last_sync "$B")"
-assert_contains "fake home zshrc back to good content" \
-  "SANDBOX_ZSHRC=ok" "$(cat "$HOME_B/.zshrc")"
-
-scenario "9: local commits during quarantine survive, then propagate after the fix"
-git -C "$A" pull -q --rebase origin main
-cat > "$A/packages/shell/.zshrc" <<'EOF'
-# deliberately broken fixture zshrc (s9)
-echo "BROKEN_S9_MARKER" >&2
-exit 7
-EOF
-git -C "$A" commit -qam "s9: break zshrc"
-git -C "$A" push -q origin main
-s9_bad="$(git -C "$A" rev-parse HEAD)"
-run_sync "$B" "$HOME_B" DOTFILES_QUIET_MINS=0     # enter quarantine
-assert_eq "revert run exit code 1" 1 "$SYNC_RC"
-assert_eq "quarantine active" "$s9_bad" "$(cat "$B/state/quarantine" 2>/dev/null)"
-
-# Local edit while quarantined: commits to local main, is NOT pushed yet.
-printf 'alias sandbox_s9=true\n' >> "$B/packages/shell/.zshrc"
-run_sync "$B" "$HOME_B" DOTFILES_QUIET_MINS=0
-assert_eq "exit code 1 (still quarantined)" 1 "$SYNC_RC"
-assert_contains "local edit auto-committed" "auto(" "$(git -C "$B" log -1 --format=%s)"
-assert_eq "commit landed on main" "main" "$(git -C "$B" rev-parse --abbrev-ref HEAD)"
-assert_contains "push deferred message (not the offline lie)" \
-  "push deferred (quarantine active)" "$SYNC_OUT"
-assert_contains "state re-asserts reverted (not ok-lying)" \
-  " reverted bad commit $s9_bad still at origin tip" "$(last_sync "$B")"
-assert_eq "origin tip still the bad commit (nothing pushed)" \
-  "$s9_bad" "$(git --git-dir="$ORIGIN" rev-parse main)"
-
-# Fix pushed from A lifts quarantine; B's local commit rebases onto it + pushes.
-git -C "$A" revert --no-edit HEAD >/dev/null
-git -C "$A" push -q origin main
-run_sync "$B" "$HOME_B" DOTFILES_QUIET_MINS=0
-assert_eq "post-fix sync exit code 0" 0 "$SYNC_RC"
-if [ ! -e "$B/state/quarantine" ]; then
-  pass "quarantine lifted"
-else
-  fail "quarantine still present"
-fi
 assert_contains "last-sync ok" " ok " "$(last_sync "$B")"
-assert_eq "quarantine-era commit pushed (origin == B HEAD)" \
+assert_eq "local commit pushed (origin == B HEAD)" \
   "$(git -C "$B" rev-parse HEAD)" "$(git --git-dir="$ORIGIN" rev-parse main)"
-assert_contains "B's live zshrc has both the fix and the local edit" \
-  "sandbox_s9" "$(cat "$HOME_B/.zshrc")"
-git -C "$A" pull -q --rebase origin main
-assert_contains "A pulled back B's quarantine-era edit (end-to-end)" \
-  "sandbox_s9" "$(cat "$A/packages/shell/.zshrc")"
+assert_eq "origin advanced by 1 commit" \
+  "1" "$(git -C "$B" rev-list --count "$origin_before"..HEAD)"
 
-scenario "10: untested local commit is blocked (smoke fails -> nothing pushed)"
-origin_before="$(git --git-dir="$ORIGIN" rev-parse main)"
-cat >> "$B/packages/shell/.zshrc" <<'EOF'
-echo "BROKEN_S10_MARKER" >&2
-exit 9
-EOF
-run_sync "$B" "$HOME_B" DOTFILES_QUIET_MINS=0
-assert_eq "exit code 1" 1 "$SYNC_RC"
-assert_contains "auto-commit was created" "auto(" "$(git -C "$B" log -1 --format=%s)"
-assert_contains "last-sync records failed/not-propagating" \
-  " failed local config fails smoke test — not propagating" "$(last_sync "$B")"
-assert_eq "origin tip UNCHANGED (nothing pushed)" \
-  "$origin_before" "$(git --git-dir="$ORIGIN" rev-parse main)"
-assert_contains "smoke exercised the broken live config" "BROKEN_S10_MARKER" "$SYNC_OUT"
-# Cleanup: drop the broken local commit (live config restored via symlink).
-git -C "$B" reset -q --hard origin/main
-
-scenario "11: cross-run lock (live pid skips, dead pid reclaims)"
+scenario "7: cross-run lock (live pid skips, dead pid reclaims)"
 sleep 60 &
 lock_pid=$!
 mkdir -p "$B/state/run.lock"
@@ -384,44 +232,6 @@ if [ ! -d "$B/state/run.lock" ]; then
 else
   fail "lock left behind"
 fi
-
-scenario "12: run-2 propagation block (clean tree, unpushed broken commit stays gated)"
-origin_before="$(git --git-dir="$ORIGIN" rev-parse main)"
-cat >> "$B/packages/shell/.zshrc" <<'EOF'
-echo "BROKEN_S12_MARKER" >&2
-exit 9
-EOF
-run_sync "$B" "$HOME_B" DOTFILES_QUIET_MINS=0     # run 1: auto-commit, blocked
-assert_eq "run 1 exit code 1" 1 "$SYNC_RC"
-assert_contains "run 1 auto-commit created" "auto(" "$(git -C "$B" log -1 --format=%s)"
-assert_eq "run 1: tree clean (breakage is committed)" "" "$(git -C "$B" status --porcelain)"
-
-run_sync "$B" "$HOME_B" DOTFILES_QUIET_MINS=0     # run 2: clean tree, still ahead
-assert_eq "run 2 exit code 1 (clean tree does NOT slip past the gate)" 1 "$SYNC_RC"
-assert_contains "run 2 last-sync records failed/not-propagating (NOT ok)" \
-  " failed local config fails smoke test — not propagating" "$(last_sync "$B")"
-assert_eq "run 2: origin tip UNCHANGED (broken commit never pushed)" \
-  "$origin_before" "$(git --git-dir="$ORIGIN" rev-parse main)"
-assert_contains "run 2: smoke exercised the broken live config" \
-  "BROKEN_S12_MARKER" "$SYNC_OUT"
-
-# Fix the config with a new commit on top; the next sync must smoke-pass and
-# push BOTH commits (the blocked one and its fix).
-cat > "$B/packages/shell/.zshrc" <<'EOF'
-# sandbox zshrc (fixture) — must stay trivially valid
-export SANDBOX_ZSHRC=ok
-alias sandbox_s12=true
-EOF
-git -C "$B" commit -qam "s12: fix zshrc"
-run_sync "$B" "$HOME_B" DOTFILES_QUIET_MINS=0
-assert_eq "post-fix exit code 0" 0 "$SYNC_RC"
-assert_contains "post-fix last-sync ok" " ok " "$(last_sync "$B")"
-assert_eq "both commits pushed (origin == B HEAD)" \
-  "$(git -C "$B" rev-parse HEAD)" "$(git --git-dir="$ORIGIN" rev-parse main)"
-assert_eq "origin advanced by 2 commits" \
-  "2" "$(git -C "$B" rev-list --count "$origin_before"..HEAD)"
-assert_eq "nothing left unpushed" \
-  "0" "$(git -C "$B" rev-list --count origin/main..HEAD)"
 
 # ---------------------------------------------------------------- summary ---
 
